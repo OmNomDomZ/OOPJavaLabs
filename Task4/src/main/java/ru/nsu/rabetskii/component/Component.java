@@ -1,4 +1,4 @@
-package ru.nsu.rabetskii;
+package ru.nsu.rabetskii.component;
 
 public interface Component {
     int getId();
