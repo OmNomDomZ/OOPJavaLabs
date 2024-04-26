@@ -9,8 +9,7 @@ public class BaseWarehouse implements Warehouse {
     private int size;
     private BlockingQueue<Component> warehouse;
 
-    @Override
-    public void Constructor(int size) {
+    public BaseWarehouse(int size) {
         this.size = size;
         warehouse = new ArrayBlockingQueue<>(size);
     }
@@ -22,5 +21,20 @@ public class BaseWarehouse implements Warehouse {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public Component getComponent() {
+        try {
+            return warehouse.take();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    @Override
+    public int getSize() {
+        return size;
     }
 }

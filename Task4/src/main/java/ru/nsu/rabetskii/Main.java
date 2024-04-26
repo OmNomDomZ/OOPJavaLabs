@@ -1,8 +1,12 @@
 package ru.nsu.rabetskii;
 
+import javax.swing.*;
 import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        CarFactory carFactory = new CarFactory();
+        SwingUtilities.invokeLater(() -> {
+            new FactoryView(new CarFactory());
+        });
     }
+}

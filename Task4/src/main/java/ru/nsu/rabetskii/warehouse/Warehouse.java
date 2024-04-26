@@ -4,6 +4,7 @@ import ru.nsu.rabetskii.component.Component;
 
 public interface Warehouse {
     void addComponent(Component component);
-    void Constructor(int size);
-//    Component getComponent() throws InterruptedException;
+    Component getComponent();
+    int getSize();
+
 }
