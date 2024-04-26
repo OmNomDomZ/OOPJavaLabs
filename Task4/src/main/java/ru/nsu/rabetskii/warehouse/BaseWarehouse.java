@@ -6,11 +6,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class BaseWarehouse implements Warehouse {
-    private int size;
+    private int capacity;
     private BlockingQueue<Component> warehouse;
 
     public BaseWarehouse(int size) {
-        this.size = size;
+        this.capacity = size;
         warehouse = new ArrayBlockingQueue<>(size);
     }
 
@@ -35,6 +35,6 @@ public class BaseWarehouse implements Warehouse {
 
     @Override
     public int getSize() {
-        return size;
+        return warehouse.size();
     }
 }

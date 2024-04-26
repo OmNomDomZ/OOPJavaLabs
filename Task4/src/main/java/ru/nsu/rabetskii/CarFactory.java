@@ -1,20 +1,20 @@
 package ru.nsu.rabetskii;
 
-import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.dealer.Dealer;
 import ru.nsu.rabetskii.supplier.*;
 import ru.nsu.rabetskii.warehouse.BaseWarehouse;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 import ru.nsu.rabetskii.worker.Worker;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class CarFactory {
+public class CarFactory implements Facade, ModelObservable{
     private Warehouse bodyWarehouse;
     private Warehouse motorWarehouse;
     private Warehouse accessoryWarehouse;
@@ -23,25 +23,54 @@ public class CarFactory {
     private final ExecutorService suppliersPool;
     private final ExecutorService workerPool;
     private ExecutorService dealersPool;
-//    private Controller controller;
+
+    private final List<Supplier> accessoriesSupplierList;
+    private final Supplier motorSupplier;
+    private final Supplier bodySupplier;
 
     private int accessorySupplierCount;
     private int workerCount;
     private int dealerCount;
+    private ModelListener listener;
+    private List<ModelListener> observers = new ArrayList<>();
+
+    @Override
+    public void addObserver(ModelListener observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(ModelListener observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyObservers() {
+        for (ModelListener observer : observers) {
+            observer.onModelChanged();
+        }
+    }
 
     public CarFactory() {
-
         readConfig();
 
         suppliersPool = Executors.newFixedThreadPool(accessorySupplierCount + 2);
         workerPool = Executors.newFixedThreadPool(workerCount);
-        dealersPool =Executors.newFixedThreadPool(dealerCount);
+        dealersPool = Executors.newFixedThreadPool(dealerCount);
+
+        accessoriesSupplierList = new LinkedList<>();
 
         for (int i = 0; i < accessorySupplierCount; i++) {
-            suppliersPool.submit(new AccessorySupplier(accessoryWarehouse, 3000));
+            Supplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 5000, this);
+            accessoriesSupplierList.add(accessorySupplier);
+            suppliersPool.submit((Runnable) accessorySupplier);
         }
-        suppliersPool.submit(new MotorSupplier(motorWarehouse, 3000));
-        suppliersPool.submit(new BodySupplier(bodyWarehouse, 3000));
+
+        motorSupplier = new MotorSupplier(motorWarehouse, 3000, this);
+        suppliersPool.submit((Runnable) motorSupplier);
+
+        bodySupplier = new BodySupplier(bodyWarehouse, 4000, this);
+        suppliersPool.submit((Runnable) bodySupplier);
 
         for (int i = 0; i < workerCount; ++i){
             workerPool.submit(new Worker(bodyWarehouse, motorWarehouse, accessoryWarehouse, autoWarehouse, 3000));
@@ -68,5 +97,65 @@ public class CarFactory {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void update() {
+        notifyListener();
+    }
+
+    private void notifyListener() {
+        if (listener != null) {
+            listener.onModelChanged();
+        }
+    }
+    @Override
+    public void setListener(ModelListener listener) {
+        this.listener = listener;
+    }
+
+    @Override
+    public List<Supplier> getAccessoriesSupplierList() {
+        return accessoriesSupplierList;
+    }
+
+    @Override
+    public Supplier getMotorSupplier() {
+        return motorSupplier;
+    }
+
+    @Override
+    public Supplier getBodySupplier() {
+        return bodySupplier;
+    }
+
+
+//    @Override
+//    public Worker getWorker() {
+//        return wo;
+//    }
+
+//    @Override
+//    public Dealer getDealer() {
+//        return null;
+//    }
+
+    @Override
+    public Warehouse getAccessoryWarehouse() {
+        return accessoryWarehouse;
+    }
+
+    @Override
+    public Warehouse getBodyWarehouse() {
+        return bodyWarehouse;
+    }
+
+    @Override
+    public Warehouse getMotorWarehouse() {
+        return motorWarehouse;
+    }
+
+    @Override
+    public Warehouse getAutoWarehouse() {
+        return autoWarehouse;
     }
 }
