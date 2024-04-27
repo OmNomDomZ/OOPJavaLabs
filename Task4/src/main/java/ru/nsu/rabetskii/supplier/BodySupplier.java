@@ -1,19 +1,16 @@
 package ru.nsu.rabetskii.supplier;
 
-import ru.nsu.rabetskii.CarFactory;
-import ru.nsu.rabetskii.component.BaseComponent;
+import ru.nsu.rabetskii.Observer;
 import ru.nsu.rabetskii.component.BodyComponent;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
 public class BodySupplier extends BaseSupplier implements Runnable{
-    CarFactory factory; // надо придумать по другому
 
-    public BodySupplier(Warehouse warehouse, int speed, CarFactory factory) {
+    public BodySupplier(Warehouse warehouse, int speed, Observer listener) {
         this.warehouse = warehouse;
         this.speed = speed;
-
-        this.factory = factory;
+        this.listener = listener;
     }
 
     @Override
@@ -23,11 +20,21 @@ public class BodySupplier extends BaseSupplier implements Runnable{
                 Thread.sleep(speed);
                 Component component = new BodyComponent();
                 warehouse.addComponent(component);
-                factory.update();
-                System.out.println("Body #" + component.getId());
+                update();
+//                System.out.println("Body #" + component.getId());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    public void update() {
+        notifyListener();
+    }
+
+    private void notifyListener() {
+        if (listener != null) {
+            listener.observableChanged();
         }
     }
 }

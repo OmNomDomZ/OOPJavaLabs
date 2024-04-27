@@ -7,14 +7,13 @@ import ru.nsu.rabetskii.warehouse.Warehouse;
 import ru.nsu.rabetskii.worker.Worker;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class CarFactory implements Facade, ModelObservable{
+public class CarFactory implements Facade, Observer{
     private Warehouse bodyWarehouse;
     private Warehouse motorWarehouse;
     private Warehouse accessoryWarehouse;
@@ -27,56 +26,50 @@ public class CarFactory implements Facade, ModelObservable{
     private final List<Supplier> accessoriesSupplierList;
     private final Supplier motorSupplier;
     private final Supplier bodySupplier;
+    private final List<Worker> workersList;
+    private final Dealer dealer;
 
     private int accessorySupplierCount;
     private int workerCount;
     private int dealerCount;
-    private ModelListener listener;
-    private List<ModelListener> observers = new ArrayList<>();
-
-    @Override
-    public void addObserver(ModelListener observer) {
-        observers.add(observer);
-    }
-
-    @Override
-    public void removeObserver(ModelListener observer) {
-        observers.remove(observer);
-    }
-
-    @Override
-    public void notifyObservers() {
-        for (ModelListener observer : observers) {
-            observer.onModelChanged();
-        }
-    }
+    private Observer listener;
+    private Controller controller;
 
     public CarFactory() {
         readConfig();
+
+        setListener(this);
+
+
 
         suppliersPool = Executors.newFixedThreadPool(accessorySupplierCount + 2);
         workerPool = Executors.newFixedThreadPool(workerCount);
         dealersPool = Executors.newFixedThreadPool(dealerCount);
 
         accessoriesSupplierList = new LinkedList<>();
+        workersList = new LinkedList<>();
 
         for (int i = 0; i < accessorySupplierCount; i++) {
-            Supplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 5000, this);
+            Supplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 1000, this);
             accessoriesSupplierList.add(accessorySupplier);
             suppliersPool.submit((Runnable) accessorySupplier);
         }
 
-        motorSupplier = new MotorSupplier(motorWarehouse, 3000, this);
+        motorSupplier = new MotorSupplier(motorWarehouse, 1000, this);
         suppliersPool.submit((Runnable) motorSupplier);
 
-        bodySupplier = new BodySupplier(bodyWarehouse, 4000, this);
+        bodySupplier = new BodySupplier(bodyWarehouse, 1000, this);
         suppliersPool.submit((Runnable) bodySupplier);
 
+//        for (int i = 0; i < dealerCount; ++i){
+        dealer = new Dealer(autoWarehouse, 15000);
+        dealersPool.submit(dealer);
+        controller = new Controller(dealer, this);
+
         for (int i = 0; i < workerCount; ++i){
-            workerPool.submit(new Worker(bodyWarehouse, motorWarehouse, accessoryWarehouse, autoWarehouse, 3000));
-        }
-        for (int i = 0; i < dealerCount; ++i){
-            dealersPool.submit(new Dealer(autoWarehouse, 3000));
+            Worker worker = new Worker(bodyWarehouse, motorWarehouse, accessoryWarehouse, autoWarehouse, this, 3000, controller);
+            workersList.add(worker);
+            workerPool.submit(worker);
         }
     }
 
@@ -100,16 +93,19 @@ public class CarFactory implements Facade, ModelObservable{
     }
 
     public void update() {
-        notifyListener();
+        synchronized (this){
+            notifyListener();
+        }
     }
 
     private void notifyListener() {
-        if (listener != null) {
-            listener.onModelChanged();
+        synchronized (this){
+            if (listener != null) {
+                listener.observableChanged();
+            }
         }
     }
-    @Override
-    public void setListener(ModelListener listener) {
+    public void setListener(Observer listener) {
         this.listener = listener;
     }
 
@@ -117,7 +113,10 @@ public class CarFactory implements Facade, ModelObservable{
     public List<Supplier> getAccessoriesSupplierList() {
         return accessoriesSupplierList;
     }
-
+    @Override
+    public List<Worker> getWorkers(){
+        return workersList;
+    }
     @Override
     public Supplier getMotorSupplier() {
         return motorSupplier;
@@ -127,17 +126,6 @@ public class CarFactory implements Facade, ModelObservable{
     public Supplier getBodySupplier() {
         return bodySupplier;
     }
-
-
-//    @Override
-//    public Worker getWorker() {
-//        return wo;
-//    }
-
-//    @Override
-//    public Dealer getDealer() {
-//        return null;
-//    }
 
     @Override
     public Warehouse getAccessoryWarehouse() {
@@ -157,5 +145,10 @@ public class CarFactory implements Facade, ModelObservable{
     @Override
     public Warehouse getAutoWarehouse() {
         return autoWarehouse;
+    }
+
+    @Override
+    public void observableChanged() {
+        update();
     }
 }

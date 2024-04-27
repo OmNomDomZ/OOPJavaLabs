@@ -6,16 +6,14 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class BaseWarehouse implements Warehouse {
-    private int capacity;
-    private BlockingQueue<Component> warehouse;
+    private final BlockingQueue<Component> warehouse;
 
-    public BaseWarehouse(int size) {
-        this.capacity = size;
-        warehouse = new ArrayBlockingQueue<>(size);
+    public BaseWarehouse(int capacity) {
+        warehouse = new ArrayBlockingQueue<>(capacity);
     }
 
     @Override
-    public  void addComponent(Component component) {
+    public void addComponent(Component component) {
         try{
             warehouse.put(component);
         } catch (InterruptedException e) {
@@ -32,9 +30,8 @@ public class BaseWarehouse implements Warehouse {
         }
     }
 
-
     @Override
-    public int getSize() {
+    public synchronized int getSize() {
         return warehouse.size();
     }
 }

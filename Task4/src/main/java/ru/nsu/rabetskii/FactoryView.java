@@ -7,8 +7,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 
-public class FactoryView extends JFrame implements ChangeListener, ModelListener {
-    private Facade factory;
+public class FactoryView extends JFrame implements ChangeListener, Observer {
+    private CarFactory factory;
     private JLabel sliderLabel;
     private JLabel informationLabel;
     private JLabel motorLabel;
@@ -19,6 +19,9 @@ public class FactoryView extends JFrame implements ChangeListener, ModelListener
     private JLabel bodyCount;
     private JLabel bodyCountUI;
     private String bodyCountString;
+    private JLabel autoCount;
+    private JLabel autoCountUI;
+    private String autoCountString;
     private JLabel accessoryLabel;
     private JLabel accessoryCount;
     private JLabel accessoryCountUI;
@@ -48,8 +51,11 @@ public class FactoryView extends JFrame implements ChangeListener, ModelListener
         accessoryCountString = repeatCharacter(factory.getAccessoryWarehouse().getSize());
         accessoryCountUI = new JLabel(accessoryCountString);
         dealerLabel = new JLabel("Dealer Supplier Speed: ");
+        autoCount = new JLabel("Num auto at the moment: " + factory.getAutoWarehouse().getSize());
+        autoCountString = repeatCharacter(factory.getAutoWarehouse().getSize());
+        autoCountUI = new JLabel(autoCountString);
 
-        motorSupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 0, 10, factory.getMotorSupplier().getSpeed() / 1000);
+        motorSupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 0, 10, factory.getMotorSupplier().getSpeed() / 1000 );
         configureSlider(motorSupplierSpeedSlider);
 
         bodySupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 0, 10, factory.getBodySupplier().getSpeed() / 1000);
@@ -93,6 +99,8 @@ public class FactoryView extends JFrame implements ChangeListener, ModelListener
         informationLabel.add(bodyCountUI);
         informationLabel.add(accessoryCount);
         informationLabel.add(accessoryCountUI);
+        informationLabel.add(autoCount);
+        informationLabel.add(autoCountUI);
 
         add(sliderLabel);
         add(informationLabel);
@@ -106,14 +114,6 @@ public class FactoryView extends JFrame implements ChangeListener, ModelListener
         slider.setMinorTickSpacing(1);
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
-    }
-
-    public String repeatCharacter(int count) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < count; i++) {
-            sb.append('#');
-        }
-        return sb.toString();
     }
 
     @Override
@@ -130,17 +130,27 @@ public class FactoryView extends JFrame implements ChangeListener, ModelListener
     }
 
     @Override
-    public void onModelChanged() {
-        motorCountString = repeatCharacter(factory.getMotorWarehouse().getSize());
-        motorCountUI.setText(motorCountString);
-        bodyCountString = repeatCharacter(factory.getBodyWarehouse().getSize());
-        bodyCountUI.setText(accessoryCountString);
-        accessoryCountString = repeatCharacter(factory.getAccessoryWarehouse().getSize());
-        accessoryCountUI.setText(accessoryCountString);
+    public void observableChanged() {
+        SwingUtilities.invokeLater(() -> {
+            motorCountString = repeatCharacter(factory.getMotorWarehouse().getSize());
+            motorCountUI.setText(motorCountString);
+            bodyCountString = repeatCharacter(factory.getBodyWarehouse().getSize());
+            bodyCountUI.setText(bodyCountString);
+            accessoryCountString = repeatCharacter(factory.getAccessoryWarehouse().getSize());
+            accessoryCountUI.setText(accessoryCountString);
+            autoCountString = repeatCharacter(factory.getAutoWarehouse().getSize());
+            autoCountUI.setText(autoCountString);
 
-        motorCount.setText("Num Motors at the moment: " + factory.getMotorWarehouse().getSize());
-        bodyCount.setText("Num Bodies at the moment: " + factory.getBodyWarehouse().getSize());
-        accessoryCount.setText("Num Accessories at the moment: " + factory.getAccessoryWarehouse().getSize());
+            autoCount.setText("Num auto at the moment: " + factory.getAutoWarehouse().getSize());
+            motorCount.setText("Num Motors at the moment: " + factory.getMotorWarehouse().getSize());
+            bodyCount.setText("Num bodies at the moment: " + factory.getBodyWarehouse().getSize());
+            accessoryCount.setText("Num Accessories at the moment: " + factory.getAccessoryWarehouse().getSize());
+        });
+    }
 
+    public String repeatCharacter(int count) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("#".repeat(Math.max(0, count)));
+        return sb.toString();
     }
 }
