@@ -46,17 +46,17 @@ public class CarFactory implements Facade, Observable, Observer {
 
         accessoriesSupplierList = new LinkedList<>();
         for (int i = 0; i < accessorySupplierCount; i++) {
-            AccessorySupplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 10000, log);
+            AccessorySupplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 1000, log);
             accessoriesSupplierList.add(accessorySupplier);
             accessorySupplier.setObservers(this);
             suppliersPool.execute(accessorySupplier);
         }
 
-        motorSupplier = new MotorSupplier(motorWarehouse, 10000, log);
+        motorSupplier = new MotorSupplier(motorWarehouse, 1000, log);
         motorSupplier.setObservers(this);
         suppliersPool.execute(motorSupplier);
 
-        bodySupplier = new BodySupplier(bodyWarehouse, 10000, log);
+        bodySupplier = new BodySupplier(bodyWarehouse, 1000, log);
         bodySupplier.setObservers(this);
         suppliersPool.execute(bodySupplier);
 
@@ -72,8 +72,8 @@ public class CarFactory implements Facade, Observable, Observer {
 
         dealersList = new LinkedList<>();
         for (int i = 0; i < dealerCount; ++i) {
-            Dealer dealer = new Dealer(autoWarehouse, 11000, controller, i, log);
-            dealer.setObservers(this);
+            Dealer dealer = new Dealer(autoWarehouse, 1000, controller, i, log);
+//            dealer.setObservers(this);
             dealersList.add(dealer);
             dealersPool.submit(dealer);
         }

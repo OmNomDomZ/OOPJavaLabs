@@ -35,7 +35,7 @@ public class Worker implements Runnable, Observable {
             Auto car = new Auto(body, motor, accessory);
             autoWarehouse.addComponent(car);
             if (log){
-                System.out.println("Worker #" + workerId + "assembled car: " + car.getCarInformation());
+                System.out.println("Worker #" + workerId + " assembled car: " + car.getCarInformation());
             }
             notifyObservers();
             synchronized (this) {

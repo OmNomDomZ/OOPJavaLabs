@@ -11,12 +11,11 @@ import java.util.List;
 public class Dealer implements Runnable, Observable {
     private final Warehouse autoWarehouse;
     private final int speed;
-    private final List<Observer> observers;
+    private Observer observer;
     private final int dealerId;
     private final boolean log;
 
     public Dealer(Warehouse autoWarehouse, int speed, Observer controller, int dealerId, boolean log) {
-        this.observers = new ArrayList<>();
         this.autoWarehouse = autoWarehouse;
         this.speed = speed;
         this.dealerId = dealerId;
@@ -31,7 +30,7 @@ public class Dealer implements Runnable, Observable {
                 Thread.sleep(speed);
                 Component car = autoWarehouse.getComponent();
                 if (log){
-                    System.out.println("Dealer #" + dealerId + "sold car: " + car.getId());
+                    System.out.println("Dealer #" + dealerId + " sold car: " + car.getId());
                 }
                 notifyObservers();
             } catch (InterruptedException e) {
@@ -43,15 +42,11 @@ public class Dealer implements Runnable, Observable {
 
     @Override
     public void notifyObservers() {
-        for (Observer observer : observers){
-            observer.update();
-        }
+        observer.update();
     }
 
     @Override
     public void setObservers(Observer observer) {
-        if (!observers.contains(observer)){
-            observers.add(observer);
-        }
+        this.observer = observer;
     }
 }
