@@ -1,9 +1,11 @@
-package ru.nsu.rabetskii;
+package ru.nsu.rabetskii.factory;
 
+import ru.nsu.rabetskii.autocontroller.AutoController;
 import ru.nsu.rabetskii.dealer.Dealer;
+import ru.nsu.rabetskii.patternobserver.Observable;
+import ru.nsu.rabetskii.patternobserver.Observer;
 import ru.nsu.rabetskii.supplier.*;
-import ru.nsu.rabetskii.warehouse.BaseWarehouse;
-import ru.nsu.rabetskii.warehouse.Warehouse;
+import ru.nsu.rabetskii.warehouse.*;
 import ru.nsu.rabetskii.worker.Worker;
 
 import java.io.IOException;
@@ -14,13 +16,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class CarFactory implements Facade, Observable, Observer {
-    private Warehouse bodyWarehouse;
-    private Warehouse motorWarehouse;
-    private Warehouse accessoryWarehouse;
-    private Warehouse autoWarehouse;
+    private BodyWarehouse bodyWarehouse;
+    private MotorWarehouse motorWarehouse;
+    private AccessoryWarehouse accessoryWarehouse;
+    private AutoWarehouse autoWarehouse;
 
     private final ExecutorService suppliersPool;
-    private final ExecutorService workerPool;
+    private final ExecutorService workersPool;
     private final ExecutorService dealersPool;
 
     private final List<AccessorySupplier> accessoriesSupplierList;
@@ -35,47 +37,49 @@ public class CarFactory implements Facade, Observable, Observer {
 
     private boolean log;
     private Observer observer;
-    private final Controller controller;
+    private final AutoController controller;
 
     public CarFactory() {
         readConfig();
 
         suppliersPool = Executors.newFixedThreadPool(accessorySupplierCount + 2);
-        workerPool = Executors.newFixedThreadPool(workerCount);
+        workersPool = Executors.newFixedThreadPool(workerCount);
         dealersPool = Executors.newFixedThreadPool(dealerCount);
 
+        bodyWarehouse.setObservers(this);
+        accessoryWarehouse.setObservers(this);
+        motorWarehouse.setObservers(this);
+        autoWarehouse.setObservers(this);
+
         accessoriesSupplierList = new LinkedList<>();
-        for (int i = 0; i < accessorySupplierCount; i++) {
-            AccessorySupplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 1000, log);
+        for (int i = 1; i <= accessorySupplierCount; i++) {
+            AccessorySupplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, log);
             accessoriesSupplierList.add(accessorySupplier);
-            accessorySupplier.setObservers(this);
             suppliersPool.execute(accessorySupplier);
         }
 
-        motorSupplier = new MotorSupplier(motorWarehouse, 1000, log);
-        motorSupplier.setObservers(this);
+        motorSupplier = new MotorSupplier(motorWarehouse, log);
         suppliersPool.execute(motorSupplier);
 
-        bodySupplier = new BodySupplier(bodyWarehouse, 1000, log);
-        bodySupplier.setObservers(this);
+        bodySupplier = new BodySupplier(bodyWarehouse, log);
         suppliersPool.execute(bodySupplier);
 
         workersList = new LinkedList<>();
-        for (int i = 0; i < workerCount; ++i){
+        for (int i = 1; i <= workerCount; ++i){
             Worker worker = new Worker(bodyWarehouse, motorWarehouse, accessoryWarehouse, autoWarehouse, i, log);
             worker.setObservers(this);
             workersList.add(worker);
-            workerPool.submit(worker);
+            workersPool.execute(worker);
         }
 
-        controller = new Controller(workersList, autoWarehouse);
+        controller = new AutoController(workersList, autoWarehouse);
 
         dealersList = new LinkedList<>();
-        for (int i = 0; i < dealerCount; ++i) {
-            Dealer dealer = new Dealer(autoWarehouse, 1000, controller, i, log);
-//            dealer.setObservers(this);
+        for (int i = 1; i <= dealerCount; ++i) {
+            Dealer dealer = new Dealer(autoWarehouse, controller, i);
             dealersList.add(dealer);
-            dealersPool.submit(dealer);
+            dealer.setObservers(controller);
+            dealersPool.execute(dealer);
         }
     }
 
@@ -84,10 +88,11 @@ public class CarFactory implements Facade, Observable, Observer {
         try {
             properties.load(getClass().getResourceAsStream("/config.properties"));
 
-            bodyWarehouse = new BaseWarehouse(Integer.parseInt(properties.getProperty("BodyWarehouseSize")));
-            accessoryWarehouse = new BaseWarehouse(Integer.parseInt(properties.getProperty("AccessoryWarehouseSize")));
-            motorWarehouse = new BaseWarehouse(Integer.parseInt(properties.getProperty("MotorWarehouseSize")));
-            autoWarehouse = new BaseWarehouse(Integer.parseInt(properties.getProperty("AutoWarehouseSize")));
+            bodyWarehouse = new BodyWarehouse(Integer.parseInt(properties.getProperty("BodyWarehouseSize")));
+            accessoryWarehouse = new AccessoryWarehouse(Integer.parseInt(properties.getProperty("AccessoryWarehouseSize")));
+            motorWarehouse = new MotorWarehouse(Integer.parseInt(properties.getProperty("MotorWarehouseSize")));
+            autoWarehouse = new AutoWarehouse(Integer.parseInt(properties.getProperty("AutoWarehouseSize")));
+
 
             accessorySupplierCount = Integer.parseInt(properties.getProperty("AccessorySupplierCount"));
             workerCount = Integer.parseInt(properties.getProperty("WorkerCount"));
@@ -104,6 +109,17 @@ public class CarFactory implements Facade, Observable, Observer {
     public List<AccessorySupplier> getAccessoriesSupplierList() {
         return accessoriesSupplierList;
     }
+
+    @Override
+    public List<Dealer> getDealerList() {
+        return dealersList;
+    }
+
+    @Override
+    public List<Worker> getWorkerList() {
+        return workersList;
+    }
+
     @Override
     public Supplier getMotorSupplier() {
         return motorSupplier;
@@ -134,10 +150,26 @@ public class CarFactory implements Facade, Observable, Observer {
         return autoWarehouse;
     }
 
+    @Override
+    public ExecutorService getSuppliersPool() {
+        return suppliersPool;
+    }
+
+    @Override
+    public ExecutorService getWorkersPool() {
+        return workersPool;
+    }
+
+    @Override
+    public ExecutorService getDealersPool() {
+        return dealersPool;
+    }
 
     @Override
     public void notifyObservers() {
-        observer.update();
+        if (observer != null){
+            observer.update();
+        }
     }
 
     @Override

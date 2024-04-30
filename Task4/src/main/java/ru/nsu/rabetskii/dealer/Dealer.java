@@ -1,37 +1,46 @@
 package ru.nsu.rabetskii.dealer;
 
-import ru.nsu.rabetskii.Observable;
-import ru.nsu.rabetskii.Observer;
+import ru.nsu.rabetskii.patternobserver.Observable;
+import ru.nsu.rabetskii.patternobserver.Observer;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 public class Dealer implements Runnable, Observable {
     private final Warehouse autoWarehouse;
-    private final int speed;
+    private int speed;
     private Observer observer;
     private final int dealerId;
-    private final boolean log;
+    private final int startSpeed = 1000;
+    private boolean isRunning = true;
 
-    public Dealer(Warehouse autoWarehouse, int speed, Observer controller, int dealerId, boolean log) {
+    public Dealer(Warehouse autoWarehouse, Observer controller, int dealerId) {
         this.autoWarehouse = autoWarehouse;
-        this.speed = speed;
+        this.speed = startSpeed;
         this.dealerId = dealerId;
-        this.log = log;
         setObservers(controller);
+    }
+
+    public int getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(int speed){
+        this.speed = speed;
     }
 
     @Override
     public void run() {
-        while (!Thread.currentThread().isInterrupted()) {
+        while (isRunning) {
             try {
                 Thread.sleep(speed);
                 Component car = autoWarehouse.getComponent();
-                if (log){
-                    System.out.println("Dealer #" + dealerId + " sold car: " + car.getId());
-                }
+                LocalTime currentTime = LocalTime.now();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                String formattedTime = currentTime.format(formatter);
+                System.out.println("<" + formattedTime + ">" + "Dealer #" + dealerId + " sold car: " + car.getInformation());
                 notifyObservers();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -39,7 +48,9 @@ public class Dealer implements Runnable, Observable {
         }
     }
 
-
+    public void changeIsRunning(){
+        this.isRunning = false;
+    }
     @Override
     public void notifyObservers() {
         observer.update();

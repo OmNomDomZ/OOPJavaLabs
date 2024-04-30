@@ -1,16 +1,17 @@
-package ru.nsu.rabetskii;
+package ru.nsu.rabetskii.autocontroller;
 
+import ru.nsu.rabetskii.patternobserver.Observer;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 import ru.nsu.rabetskii.worker.Worker;
 
 import java.util.List;
 
-public class Controller implements Observer {
+public class AutoController implements Observer {
 
     private final List<Worker> workers;
-    Warehouse autoWarehouse;
+    private final Warehouse autoWarehouse;
 
-    public Controller(List<Worker> workers, Warehouse autoWarehouse){
+    public AutoController(List<Worker> workers, Warehouse autoWarehouse){
         this.workers = workers;
         this.autoWarehouse = autoWarehouse;
     }
@@ -27,5 +28,4 @@ public class Controller implements Observer {
             }
         }
     }
-
 }

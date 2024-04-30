@@ -1,4 +1,4 @@
-package ru.nsu.rabetskii;
+package ru.nsu.rabetskii.patternobserver;
 
 public interface Observer {
     void update();

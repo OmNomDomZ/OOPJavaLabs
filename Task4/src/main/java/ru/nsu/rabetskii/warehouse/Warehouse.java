@@ -7,4 +7,6 @@ public interface Warehouse {
     Component getComponent();
     int getSize();
     boolean isFull();
+    int getNewId();
+    int getLastId();
 }
