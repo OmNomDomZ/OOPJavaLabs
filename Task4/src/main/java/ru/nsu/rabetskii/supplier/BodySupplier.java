@@ -1,16 +1,16 @@
 package ru.nsu.rabetskii.supplier;
 
-import ru.nsu.rabetskii.Listener;
+import ru.nsu.rabetskii.Observable;
+import ru.nsu.rabetskii.Observer;
 import ru.nsu.rabetskii.component.BodyComponent;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
-public class BodySupplier extends BaseSupplier implements Runnable{
+public class BodySupplier extends BaseSupplier implements Runnable, Observable {
 
-    public BodySupplier(Warehouse warehouse, int speed, Listener listener, boolean log) {
+    public BodySupplier(Warehouse warehouse, int speed, boolean log) {
         this.warehouse = warehouse;
         this.speed = speed;
-        this.listener = listener;
         this.log = log;
     }
 
@@ -21,7 +21,7 @@ public class BodySupplier extends BaseSupplier implements Runnable{
                 Thread.sleep(speed);
                 Component component = new BodyComponent();
                 warehouse.addComponent(component);
-                update();
+                notifyObservers();
                 if (log){
                     System.out.println("Body #" + component.getId());
                 }
@@ -31,13 +31,13 @@ public class BodySupplier extends BaseSupplier implements Runnable{
         }
     }
 
-    public void update() {
-        notifyListener();
+    @Override
+    public void notifyObservers() {
+        observer.update();
     }
 
-    private void notifyListener() {
-        if (listener != null) {
-            listener.observableChanged();
-        }
+    @Override
+    public void setObservers(Observer observer) {
+        this.observer = observer;
     }
 }

@@ -7,34 +7,34 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 
-public class FactoryView extends JFrame implements ChangeListener, Listener {
-    private CarFactory factory;
-    private JLabel sliderLabel;
-    private JLabel informationLabel;
-    private JLabel motorLabel;
-    private JLabel motorCount;
-    private JLabel motorCountUI;
+public class FactoryView extends JFrame implements ChangeListener, Observer {
+    private final CarFactory factory;
+    private final JLabel sliderLabel;
+    private final JLabel informationLabel;
+    private final JLabel motorLabel;
+    private final JLabel motorCount;
+    private final JLabel motorCountUI;
     private String motorCountString;
-    private JLabel bodyLabel;
-    private JLabel bodyCount;
-    private JLabel bodyCountUI;
+    private final JLabel bodyLabel;
+    private final JLabel bodyCount;
+    private final JLabel bodyCountUI;
     private String bodyCountString;
-    private JLabel autoCount;
-    private JLabel autoCountUI;
+    private final JLabel autoCount;
+    private final JLabel autoCountUI;
     private String autoCountString;
-    private JLabel accessoryLabel;
-    private JLabel accessoryCount;
-    private JLabel accessoryCountUI;
+    private final JLabel accessoryLabel;
+    private final JLabel accessoryCount;
+    private final JLabel accessoryCountUI;
     private String accessoryCountString;
-    private JLabel dealerLabel;
-    private JSlider motorSupplierSpeedSlider;
-    private JSlider bodySupplierSpeedSlider;
-    private JSlider accessorySupplierSpeedSlider;
-    private JSlider dealerSupplierSpeedSlider;
+    private final JLabel dealerLabel;
+    private final JSlider motorSupplierSpeedSlider;
+    private final JSlider bodySupplierSpeedSlider;
+    private final JSlider accessorySupplierSpeedSlider;
+    private final JSlider dealerSupplierSpeedSlider;
 
     public FactoryView(CarFactory model){
         this.factory = model;
-        factory.setListener(this);
+        factory.setObservers(this);
 
         sliderLabel = new JLabel();
         informationLabel = new JLabel();
@@ -130,7 +130,7 @@ public class FactoryView extends JFrame implements ChangeListener, Listener {
     }
 
     @Override
-    public void observableChanged() {
+    public void update() {
         SwingUtilities.invokeLater(() -> {
             motorCountString = repeatCharacter(factory.getMotorWarehouse().getSize());
             motorCountUI.setText(motorCountString);
@@ -149,8 +149,6 @@ public class FactoryView extends JFrame implements ChangeListener, Listener {
     }
 
     public String repeatCharacter(int count) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("#".repeat(Math.max(0, count)));
-        return sb.toString();
+        return "#".repeat(Math.max(0, count));
     }
 }

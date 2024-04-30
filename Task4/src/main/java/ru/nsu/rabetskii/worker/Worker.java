@@ -1,30 +1,27 @@
 package ru.nsu.rabetskii.worker;
 
-import ru.nsu.rabetskii.Controller;
-import ru.nsu.rabetskii.Listener;
+import ru.nsu.rabetskii.Observable;
+import ru.nsu.rabetskii.Observer;
 import ru.nsu.rabetskii.auto.Auto;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
-public class Worker implements Runnable, Listener {
+public class Worker implements Runnable, Observable {
     private final Warehouse bodyWarehouse;
     private final Warehouse motorWarehouse;
     private final Warehouse accessoryWarehouse;
     private final Warehouse autoWarehouse;
 
-    private int workerId;
-    private final Listener listener;
-    private final int speed;
-    private boolean log;
+    private final int workerId;
+    private Observer observer;
+    private final boolean log;
     private boolean isWaiting = false;
 
-    public Worker(Warehouse bodyWarehouse, Warehouse motorWarehouse, Warehouse accessoryWarehouse, Warehouse autoWarehouse, Listener listener, int speed, int id, boolean log) {
+    public Worker(Warehouse bodyWarehouse, Warehouse motorWarehouse, Warehouse accessoryWarehouse, Warehouse autoWarehouse, int id, boolean log) {
         this.bodyWarehouse = bodyWarehouse;
         this.motorWarehouse = motorWarehouse;
         this.accessoryWarehouse = accessoryWarehouse;
         this.autoWarehouse = autoWarehouse;
-        this.listener = listener;
-        this.speed = speed;
         this.workerId = id;
         this.log = log;
     }
@@ -37,10 +34,10 @@ public class Worker implements Runnable, Listener {
             Component accessory = accessoryWarehouse.getComponent();
             Auto car = new Auto(body, motor, accessory);
             autoWarehouse.addComponent(car);
-            update();
             if (log){
-                System.out.println("Worker assembled car: " + car.getCarInformation());
+                System.out.println("Worker #" + workerId + "assembled car: " + car.getCarInformation());
             }
+            notifyObservers();
             synchronized (this) {
                 isWaiting = true;
                 try {
@@ -52,22 +49,17 @@ public class Worker implements Runnable, Listener {
         }
     }
 
-    private void update() {
-        notifyListener();
-    }
-
-    private void notifyListener() {
-        if (listener != null) {
-            listener.observableChanged();
-        }
+    public boolean isWaiting() {
+        return isWaiting;
     }
 
     @Override
-    public void observableChanged() {
-
+    public void notifyObservers() {
+        observer.update();
     }
 
-    public boolean isWaiting() {
-        return isWaiting;
+    @Override
+    public void setObservers(Observer observer) {
+        this.observer = observer;
     }
 }
