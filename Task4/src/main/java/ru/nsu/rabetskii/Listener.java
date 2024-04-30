@@ -1,5 +1,5 @@
 package ru.nsu.rabetskii;
 
-public interface Observer {
+public interface Listener {
     void observableChanged();
 }

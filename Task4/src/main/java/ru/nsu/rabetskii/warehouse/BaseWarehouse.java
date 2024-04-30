@@ -34,4 +34,9 @@ public class BaseWarehouse implements Warehouse {
     public synchronized int getSize() {
         return warehouse.size();
     }
+
+    @Override
+    public boolean isFull() {
+        return warehouse.size() == warehouse.remainingCapacity();
+    }
 }

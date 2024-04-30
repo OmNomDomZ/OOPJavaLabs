@@ -1,12 +1,13 @@
 package ru.nsu.rabetskii.supplier;
 
-import ru.nsu.rabetskii.Observer;
+import ru.nsu.rabetskii.Listener;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
 public class BaseSupplier implements Supplier {
     protected int speed;
     protected Warehouse warehouse;
-    protected Observer listener;
+    protected Listener listener;
+    protected boolean log;
     @Override
     public void setSpeed(int speed) {
         this.speed = speed;

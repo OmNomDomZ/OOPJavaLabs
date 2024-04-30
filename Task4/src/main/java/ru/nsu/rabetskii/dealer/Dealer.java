@@ -1,22 +1,22 @@
 package ru.nsu.rabetskii.dealer;
 
-import ru.nsu.rabetskii.Controller;
-import ru.nsu.rabetskii.Observer;
+import ru.nsu.rabetskii.Listener;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
-
-import javax.sql.RowSetListener;
-import java.util.LinkedList;
-import java.util.Set;
 
 public class Dealer implements Runnable {
     private Warehouse autoWarehouse;
     private int speed;
-    private Observer listener;
+    private Listener listener;
+    private int dealerId;
+    private boolean log;
 
-    public Dealer(Warehouse autoWarehouse, int speed) {
+    public Dealer(Warehouse autoWarehouse, int speed, Listener listener, int dealerId, boolean log) {
         this.autoWarehouse = autoWarehouse;
         this.speed = speed;
+        setListener(listener);
+        this.dealerId = dealerId;
+        this.log = log;
     }
 
     @Override
@@ -25,16 +25,19 @@ public class Dealer implements Runnable {
             try {
                 Thread.sleep(speed);
                 Component car = autoWarehouse.getComponent();
-                System.out.println("Dealer sold car: " + car.getId());
-
-                listener.observableChanged();
+                if (log){
+                    System.out.println("Dealer sold car: " + car.getId());
+                }
+                if (listener != null) {
+                    listener.observableChanged();
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
     }
 
-    public void setListener(Observer listener){
+    public void setListener(Listener listener){
         this.listener = listener;
     }
 }

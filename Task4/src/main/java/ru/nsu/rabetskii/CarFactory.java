@@ -1,5 +1,6 @@
 package ru.nsu.rabetskii;
 
+import ru.nsu.rabetskii.auto.Auto;
 import ru.nsu.rabetskii.dealer.Dealer;
 import ru.nsu.rabetskii.supplier.*;
 import ru.nsu.rabetskii.warehouse.BaseWarehouse;
@@ -13,63 +14,64 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class CarFactory implements Facade, Observer{
+public class CarFactory implements Facade, Listener {
     private Warehouse bodyWarehouse;
     private Warehouse motorWarehouse;
     private Warehouse accessoryWarehouse;
     private Warehouse autoWarehouse;
 
     private final ExecutorService suppliersPool;
-    private final ExecutorService workerPool;
+    private ExecutorService workerPool;
     private ExecutorService dealersPool;
 
     private final List<Supplier> accessoriesSupplierList;
     private final Supplier motorSupplier;
     private final Supplier bodySupplier;
     private final List<Worker> workersList;
-    private final Dealer dealer;
+    private final List<Dealer> dealersList;
 
     private int accessorySupplierCount;
     private int workerCount;
     private int dealerCount;
-    private Observer listener;
+
+    private boolean log;
+    private Listener listener;
     private Controller controller;
 
     public CarFactory() {
         readConfig();
-
-        setListener(this);
-
-
 
         suppliersPool = Executors.newFixedThreadPool(accessorySupplierCount + 2);
         workerPool = Executors.newFixedThreadPool(workerCount);
         dealersPool = Executors.newFixedThreadPool(dealerCount);
 
         accessoriesSupplierList = new LinkedList<>();
-        workersList = new LinkedList<>();
-
         for (int i = 0; i < accessorySupplierCount; i++) {
-            Supplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 1000, this);
+            Supplier accessorySupplier = new AccessorySupplier(accessoryWarehouse, 10000, this, log);
             accessoriesSupplierList.add(accessorySupplier);
-            suppliersPool.submit((Runnable) accessorySupplier);
+            suppliersPool.execute((Runnable) accessorySupplier);
         }
 
-        motorSupplier = new MotorSupplier(motorWarehouse, 1000, this);
-        suppliersPool.submit((Runnable) motorSupplier);
+        motorSupplier = new MotorSupplier(motorWarehouse, 10000, this, log);
+        suppliersPool.execute((Runnable) motorSupplier);
 
-        bodySupplier = new BodySupplier(bodyWarehouse, 1000, this);
-        suppliersPool.submit((Runnable) bodySupplier);
+        bodySupplier = new BodySupplier(bodyWarehouse, 10000, this, log);
+        suppliersPool.execute((Runnable) bodySupplier);
 
-//        for (int i = 0; i < dealerCount; ++i){
-        dealer = new Dealer(autoWarehouse, 15000);
-        dealersPool.submit(dealer);
-        controller = new Controller(dealer, this);
-
+        workersList = new LinkedList<>();
         for (int i = 0; i < workerCount; ++i){
-            Worker worker = new Worker(bodyWarehouse, motorWarehouse, accessoryWarehouse, autoWarehouse, this, 3000, controller);
+            Worker worker = new Worker(bodyWarehouse, motorWarehouse, accessoryWarehouse, autoWarehouse, this, 9000, i, log);
             workersList.add(worker);
             workerPool.submit(worker);
+        }
+
+        controller = new Controller(workersList, autoWarehouse);
+
+        dealersList = new LinkedList<>();
+        for (int i = 0; i < dealerCount; ++i) {
+            Dealer dealer = new Dealer(autoWarehouse, 11000, controller, i, log);
+            dealersList.add(dealer);
+            dealersPool.submit(dealer);
         }
     }
 
@@ -86,6 +88,8 @@ public class CarFactory implements Facade, Observer{
             accessorySupplierCount = Integer.parseInt(properties.getProperty("AccessorySupplierCount"));
             workerCount = Integer.parseInt(properties.getProperty("WorkerCount"));
             dealerCount = Integer.parseInt(properties.getProperty("DealerCount"));
+
+            log = Boolean.parseBoolean(properties.getProperty("log"));
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -105,7 +109,7 @@ public class CarFactory implements Facade, Observer{
             }
         }
     }
-    public void setListener(Observer listener) {
+    public void setListener(Listener listener) {
         this.listener = listener;
     }
 
@@ -148,7 +152,19 @@ public class CarFactory implements Facade, Observer{
     }
 
     @Override
+    public ExecutorService getWorkerPool() {
+        return workerPool;
+    }
+
+    @Override
+    public int getWorkerCount(){
+        return workerCount;
+    }
+
+    @Override
     public void observableChanged() {
         update();
     }
+
+
 }

@@ -1,16 +1,17 @@
 package ru.nsu.rabetskii.supplier;
 
-import ru.nsu.rabetskii.Observer;
+import ru.nsu.rabetskii.Listener;
 import ru.nsu.rabetskii.component.BodyComponent;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
 public class BodySupplier extends BaseSupplier implements Runnable{
 
-    public BodySupplier(Warehouse warehouse, int speed, Observer listener) {
+    public BodySupplier(Warehouse warehouse, int speed, Listener listener, boolean log) {
         this.warehouse = warehouse;
         this.speed = speed;
         this.listener = listener;
+        this.log = log;
     }
 
     @Override
@@ -21,7 +22,9 @@ public class BodySupplier extends BaseSupplier implements Runnable{
                 Component component = new BodyComponent();
                 warehouse.addComponent(component);
                 update();
-//                System.out.println("Body #" + component.getId());
+                if (log){
+                    System.out.println("Body #" + component.getId());
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

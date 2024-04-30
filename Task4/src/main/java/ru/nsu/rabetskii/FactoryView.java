@@ -7,7 +7,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 
-public class FactoryView extends JFrame implements ChangeListener, Observer {
+public class FactoryView extends JFrame implements ChangeListener, Listener {
     private CarFactory factory;
     private JLabel sliderLabel;
     private JLabel informationLabel;

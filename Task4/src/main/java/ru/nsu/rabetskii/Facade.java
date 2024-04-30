@@ -5,6 +5,7 @@ import ru.nsu.rabetskii.warehouse.Warehouse;
 import ru.nsu.rabetskii.worker.Worker;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 public interface Facade {
     List<Supplier> getAccessoriesSupplierList();
@@ -16,4 +17,6 @@ public interface Facade {
     Warehouse getBodyWarehouse();
     Warehouse getMotorWarehouse();
     Warehouse getAutoWarehouse();
+    ExecutorService getWorkerPool();
+    int getWorkerCount();
 }

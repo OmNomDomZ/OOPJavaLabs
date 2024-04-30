@@ -6,4 +6,5 @@ public interface Warehouse {
     void addComponent(Component component);
     Component getComponent();
     int getSize();
+    boolean isFull();
 }

@@ -1,58 +1,53 @@
 package ru.nsu.rabetskii.worker;
 
 import ru.nsu.rabetskii.Controller;
-import ru.nsu.rabetskii.Observer;
+import ru.nsu.rabetskii.Listener;
 import ru.nsu.rabetskii.auto.Auto;
 import ru.nsu.rabetskii.component.Component;
 import ru.nsu.rabetskii.warehouse.Warehouse;
 
-public class Worker implements Runnable, Observer {
+public class Worker implements Runnable, Listener {
     private final Warehouse bodyWarehouse;
     private final Warehouse motorWarehouse;
     private final Warehouse accessoryWarehouse;
     private final Warehouse autoWarehouse;
-    private final Observer listener;
-    private final Controller controller;
-    private final int speed;
 
-    public Worker(Warehouse bodyWarehouse, Warehouse motorWarehouse, Warehouse accessoryWarehouse, Warehouse autoWarehouse, Observer listener, int speed, Controller controller) {
+    private int workerId;
+    private final Listener listener;
+    private final int speed;
+    private boolean log;
+    private boolean isWaiting = false;
+
+    public Worker(Warehouse bodyWarehouse, Warehouse motorWarehouse, Warehouse accessoryWarehouse, Warehouse autoWarehouse, Listener listener, int speed, int id, boolean log) {
         this.bodyWarehouse = bodyWarehouse;
         this.motorWarehouse = motorWarehouse;
         this.accessoryWarehouse = accessoryWarehouse;
         this.autoWarehouse = autoWarehouse;
         this.listener = listener;
         this.speed = speed;
-        this.controller = controller;
-        controller.setListener(this);
+        this.workerId = id;
+        this.log = log;
     }
 
     @Override
-    public void observableChanged() {
-        if (autoWarehouse.getSize() == 0){
-            createCar();
-        }
-    }
-
-    public void createCar(){
+    public void run(){
         while (!Thread.currentThread().isInterrupted()) {
-            try {
-                Thread.sleep(speed);
-                Component body = null;
-                Component motor = null;
-                Component accessory = null;
-                Auto car = null;
-
-                if (bodyWarehouse.getSize() > 0 && motorWarehouse.getSize() > 0 && accessoryWarehouse.getSize() > 0) {
-                    body = bodyWarehouse.getComponent();
-                    motor = motorWarehouse.getComponent();
-                    accessory = accessoryWarehouse.getComponent();
-                    car = new Auto(body, motor, accessory);
-                    autoWarehouse.addComponent(car);
-                    update();
-                    System.out.println("Worker assembled car: " + car.getCarInformation());
+            Component body = bodyWarehouse.getComponent();
+            Component motor = motorWarehouse.getComponent();
+            Component accessory = accessoryWarehouse.getComponent();
+            Auto car = new Auto(body, motor, accessory);
+            autoWarehouse.addComponent(car);
+            update();
+            if (log){
+                System.out.println("Worker assembled car: " + car.getCarInformation());
+            }
+            synchronized (this) {
+                isWaiting = true;
+                try {
+                    this.wait();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
         }
     }
@@ -68,7 +63,11 @@ public class Worker implements Runnable, Observer {
     }
 
     @Override
-    public void run() {
+    public void observableChanged() {
 
+    }
+
+    public boolean isWaiting() {
+        return isWaiting;
     }
 }
