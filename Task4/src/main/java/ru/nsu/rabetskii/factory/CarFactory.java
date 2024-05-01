@@ -1,5 +1,6 @@
 package ru.nsu.rabetskii.factory;
 
+import ru.nsu.rabetskii.customthreadpool.CustomThreadPool;
 import ru.nsu.rabetskii.autocontroller.AutoController;
 import ru.nsu.rabetskii.dealer.Dealer;
 import ru.nsu.rabetskii.patternobserver.Observable;
@@ -12,8 +13,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class CarFactory implements Facade, Observable, Observer {
     private BodyWarehouse bodyWarehouse;
@@ -21,9 +21,13 @@ public class CarFactory implements Facade, Observable, Observer {
     private AccessoryWarehouse accessoryWarehouse;
     private AutoWarehouse autoWarehouse;
 
-    private final ExecutorService suppliersPool;
-    private final ExecutorService workersPool;
-    private final ExecutorService dealersPool;
+//    private final ExecutorService suppliersPool;
+//    private final ExecutorService workersPool;
+//    private final ExecutorService dealersPool;
+
+    private final CustomThreadPool suppliersPool;
+    private final CustomThreadPool workersPool;
+    private final CustomThreadPool dealersPool;
 
     private final List<AccessorySupplier> accessoriesSupplierList;
     private final MotorSupplier motorSupplier;
@@ -42,9 +46,13 @@ public class CarFactory implements Facade, Observable, Observer {
     public CarFactory() {
         readConfig();
 
-        suppliersPool = Executors.newFixedThreadPool(accessorySupplierCount + 2);
-        workersPool = Executors.newFixedThreadPool(workerCount);
-        dealersPool = Executors.newFixedThreadPool(dealerCount);
+//        suppliersPool = Executors.newFixedThreadPool(accessorySupplierCount + 2);
+//        workersPool = Executors.newFixedThreadPool(workerCount);
+//        dealersPool = Executors.newFixedThreadPool(dealerCount);
+
+        suppliersPool = new CustomThreadPool(accessorySupplierCount + 2, new LinkedBlockingQueue<>());
+        workersPool = new CustomThreadPool(workerCount, new LinkedBlockingQueue<>());
+        dealersPool = new CustomThreadPool(dealerCount, new LinkedBlockingQueue<>());
 
         bodyWarehouse.setObservers(this);
         accessoryWarehouse.setObservers(this);
@@ -150,18 +158,33 @@ public class CarFactory implements Facade, Observable, Observer {
         return autoWarehouse;
     }
 
+//    @Override
+//    public ExecutorService getSuppliersPool() {
+//        return suppliersPool;
+//    }
+//
+//    @Override
+//    public ExecutorService getWorkersPool() {
+//        return workersPool;
+//    }
+//
+//    @Override
+//    public ExecutorService getDealersPool() {
+//        return dealersPool;
+//    }
+
     @Override
-    public ExecutorService getSuppliersPool() {
+    public CustomThreadPool getSuppliersPool() {
         return suppliersPool;
     }
 
     @Override
-    public ExecutorService getWorkersPool() {
+    public CustomThreadPool getWorkersPool() {
         return workersPool;
     }
 
     @Override
-    public ExecutorService getDealersPool() {
+    public CustomThreadPool getDealersPool() {
         return dealersPool;
     }
 

@@ -102,12 +102,19 @@ public class FactoryView extends JFrame implements ChangeListener, Observer {
         gbc.gridwidth = 2;
         mainLabel.add(autoInformation, gbc);
 
+//        JButton button = new JButton("STOP");
+//        gbc.gridx = 0; gbc.gridy = 5;
+//        gbc.gridwidth = 2;
+//        mainLabel.add(button, gbc);
+
         add(mainLabel);
 
         motorSupplierSpeedSlider.addChangeListener(this);
         bodySupplierSpeedSlider.addChangeListener(this);
         accessorySupplierSpeedSlider.addChangeListener(this);
         dealerSupplierSpeedSlider.addChangeListener(this);
+
+//        button.addActionListener(e -> new MyWindowAdapter(factory).windowClosing(null));
 
         addWindowListener(new MyWindowAdapter(factory));
     }
