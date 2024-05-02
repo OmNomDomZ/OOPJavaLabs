@@ -11,20 +11,25 @@ public class CustomThreadPool implements ExecutorService {
     private final int maxThreads;
     private final BlockingQueue<Runnable> taskQueue;
     private final List<Thread> threads = new ArrayList<>();
-    private final List<Future<?>> futures = new ArrayList<>();
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
     private final ReentrantLock lock = new ReentrantLock();
+
+    /*
+    CountDownLatch позволяет ожидать, пока не завершится определённое количество операций в других потоках.
+     */
+    private final CountDownLatch latch;
 
     public CustomThreadPool(int maxThreads, BlockingQueue<Runnable> taskQueue) {
         this.maxThreads = maxThreads;
         this.taskQueue = taskQueue;
+        this.latch = new CountDownLatch(maxThreads);
     }
 
     @Override
     public void execute(Runnable command) {
         if (!isRunning.get())
         {
-            throw new IllegalStateException("ThreadPool is shutting down");
+            throw new RuntimeException("ThreadPool is shutting down");
         }
         try {
             taskQueue.put(command);
@@ -40,7 +45,13 @@ public class CustomThreadPool implements ExecutorService {
             while (threads.size() < maxThreads && !taskQueue.isEmpty()) {
                 Runnable task = taskQueue.poll();
                 if (task != null) {
-                    Thread thread = new Thread(task);
+                    Thread thread = new Thread(() -> {
+                        try {
+                            task.run();
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
                     threads.add(thread);
                     thread.start();
                 }
@@ -71,23 +82,35 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public boolean isTerminated() {
-        return !isRunning.get() && threads.stream().noneMatch(Thread::isAlive);
+//        return !isRunning.get() && threads.stream().noneMatch(Thread::isAlive);
+        return !isRunning.get() && latch.getCount() == 0;
     }
 
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        long startTime = System.nanoTime();
-        while (System.nanoTime() - startTime < unit.toNanos(timeout)) {
-            if (isTerminated()) {
-                return true;
-            }
-            Thread.sleep(100);
-        }
-        return isTerminated();
+        /*
+        Блокирует вызывающий поток до тех пор,
+        пока все потоки пула не завершат выполнение после его остановки,
+        или пока не истечет тайм-аут
+        */
+//        long startTime = System.nanoTime();
+//        while (System.nanoTime() - startTime < unit.toNanos(timeout)) {
+//            if (isTerminated()) {
+//                return true;
+//            }
+//            Thread.sleep(100);
+//        }
+//        return isTerminated();
+
+        return latch.await(timeout, unit);
     }
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
+        /*
+        Выполняет задачу, возвращая Future<T>,
+        который можно использовать для получения результата
+         */
         FutureTask<T> future = new FutureTask<>(task);
         execute(future);
         return future;
@@ -109,6 +132,10 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
+        /*
+        Выполняет коллекцию задач, блокируя до тех пор,
+        пока все задачи не будут выполнены, и возвращает список результатов
+        */
         List<Future<T>> futures = new ArrayList<>();
         for (Callable<T> task : tasks) {
             FutureTask<T> future = new FutureTask<>(task);
@@ -127,6 +154,9 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
+        /*
+        Аналогичен invokeAll, но с таймаутом на выполнение всех задач
+         */
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         List<Future<T>> futures = new ArrayList<>();
         for (Callable<T> task : tasks) {
@@ -149,6 +179,9 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+        /*
+        Выполняет коллекцию задач Callable<T> и возвращает результат одной успешно выполненной задачи
+         */
         ExecutionException lastException = null;
         for (Callable<T> task : tasks) {
             try {
@@ -162,6 +195,10 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        /*
+        Аналогичен invokeAny, но с таймаутом, после которого выбрасывается TimeoutException,
+        если ни одна задача не была успешно выполнена
+         */
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         ExecutionException lastException = null;
         for (Callable<T> task : tasks) {
