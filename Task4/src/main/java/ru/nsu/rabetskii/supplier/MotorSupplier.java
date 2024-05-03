@@ -19,12 +19,14 @@ public class MotorSupplier extends BaseSupplier implements Runnable {
                 Thread.sleep(speed);
                 int motorId = warehouse.getNewId();
                 Component component = new MotorComponent(motorId);
-                warehouse.addComponent(component);
+                if (!warehouse.addComponent(component)){
+                    continue;
+                }
                 if (log){
                     System.out.println("Motor #" + component.getId());
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                break;
             }
         }
     }

@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class CustomThreadPool implements ExecutorService {
@@ -13,16 +14,11 @@ public class CustomThreadPool implements ExecutorService {
     private final List<Thread> threads = new ArrayList<>();
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
     private final ReentrantLock lock = new ReentrantLock();
-
-    /*
-    CountDownLatch позволяет ожидать, пока не завершится определённое количество операций в других потоках.
-     */
-    private final CountDownLatch latch;
+    private final Condition termination = lock.newCondition();
 
     public CustomThreadPool(int maxThreads, BlockingQueue<Runnable> taskQueue) {
         this.maxThreads = maxThreads;
         this.taskQueue = taskQueue;
-        this.latch = new CountDownLatch(maxThreads);
     }
 
     @Override
@@ -45,13 +41,7 @@ public class CustomThreadPool implements ExecutorService {
             while (threads.size() < maxThreads && !taskQueue.isEmpty()) {
                 Runnable task = taskQueue.poll();
                 if (task != null) {
-                    Thread thread = new Thread(() -> {
-                        try {
-                            task.run();
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
+                    Thread thread = new Thread(task);
                     threads.add(thread);
                     thread.start();
                 }
@@ -63,16 +53,30 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public void shutdown() {
-        isRunning.set(false);
+        lock.lock();
+        try {
+            isRunning.set(false);
+            termination.signalAll();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public List<Runnable> shutdownNow() {
-        isRunning.set(false);
-        List<Runnable> unfinishedTasks = new ArrayList<>();
-        taskQueue.drainTo(unfinishedTasks);
-        threads.forEach(Thread::interrupt);
-        return unfinishedTasks;
+        lock.lock();
+        try {
+            isRunning.set(false);
+            List<Runnable> unfinishedTasks = new ArrayList<>(taskQueue);
+            taskQueue.clear();
+            for (Thread thread : threads) {
+                thread.interrupt();
+            }
+            termination.signalAll();
+            return unfinishedTasks;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -82,8 +86,7 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public boolean isTerminated() {
-//        return !isRunning.get() && threads.stream().noneMatch(Thread::isAlive);
-        return !isRunning.get() && latch.getCount() == 0;
+        return !isRunning.get() && threads.stream().noneMatch(Thread::isAlive);
     }
 
     @Override
@@ -93,16 +96,19 @@ public class CustomThreadPool implements ExecutorService {
         пока все потоки пула не завершат выполнение после его остановки,
         или пока не истечет тайм-аут
         */
-//        long startTime = System.nanoTime();
-//        while (System.nanoTime() - startTime < unit.toNanos(timeout)) {
-//            if (isTerminated()) {
-//                return true;
-//            }
-//            Thread.sleep(100);
-//        }
-//        return isTerminated();
+        long nanos = unit.toNanos(timeout);
+        lock.lock();
+        try {
+            while (!isTerminated()) {
+                if (nanos <= 0L)
+                    return false;
+                nanos = termination.awaitNanos(nanos);
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
 
-        return latch.await(timeout, unit);
     }
 
     @Override

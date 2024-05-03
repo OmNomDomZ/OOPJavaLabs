@@ -14,17 +14,19 @@ public class BodySupplier extends BaseSupplier implements Runnable {
 
     @Override
     public void run() {
-        while (isRunning) {
+        while (isRunning && !Thread.currentThread().isInterrupted()) {
             try {
                 Thread.sleep(speed);
                 int bodyId = warehouse.getNewId();
                 Component component = new BodyComponent(bodyId);
-                warehouse.addComponent(component);
+                if (!warehouse.addComponent(component)){
+                    continue;
+                }
                 if (log){
                     System.out.println("Body #" + component.getId());
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                break;
             }
         }
     }

@@ -1,7 +1,7 @@
 package ru.nsu.rabetskii.factory;
 
-import ru.nsu.rabetskii.customthreadpool.CustomThreadPool;
 import ru.nsu.rabetskii.autocontroller.AutoController;
+import ru.nsu.rabetskii.customthreadpool.CustomThreadPool;
 import ru.nsu.rabetskii.dealer.Dealer;
 import ru.nsu.rabetskii.patternobserver.Observable;
 import ru.nsu.rabetskii.patternobserver.Observer;
@@ -158,35 +158,35 @@ public class CarFactory implements Facade, Observable, Observer {
         return autoWarehouse;
     }
 
-//    @Override
-//    public ExecutorService getSuppliersPool() {
-//        return suppliersPool;
-//    }
-//
-//    @Override
-//    public ExecutorService getWorkersPool() {
-//        return workersPool;
-//    }
-//
-//    @Override
-//    public ExecutorService getDealersPool() {
-//        return dealersPool;
-//    }
-
     @Override
-    public CustomThreadPool getSuppliersPool() {
+    public ExecutorService getSuppliersPool() {
         return suppliersPool;
     }
 
     @Override
-    public CustomThreadPool getWorkersPool() {
+    public ExecutorService getWorkersPool() {
         return workersPool;
     }
 
     @Override
-    public CustomThreadPool getDealersPool() {
+    public ExecutorService getDealersPool() {
         return dealersPool;
     }
+
+//    @Override
+//    public CustomThreadPool getSuppliersPool() {
+//        return suppliersPool;
+//    }
+//
+//    @Override
+//    public CustomThreadPool getWorkersPool() {
+//        return workersPool;
+//    }
+//
+//    @Override
+//    public CustomThreadPool getDealersPool() {
+//        return dealersPool;
+//    }
 
     @Override
     public void notifyObservers() {

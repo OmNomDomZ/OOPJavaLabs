@@ -6,6 +6,7 @@ import ru.nsu.rabetskii.component.Component;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MotorWarehouse implements Warehouse, Observable {
@@ -17,24 +18,23 @@ public class MotorWarehouse implements Warehouse, Observable {
     }
 
     @Override
-    public void addComponent(Component component) {
+    public boolean addComponent(Component component) {
         try{
-            motorWarehouse.put(component);
-            notifyObservers();
+            boolean res = motorWarehouse.offer(component, 5, TimeUnit.SECONDS);
+            if (res) {
+                notifyObservers();
+            }
+            return res;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public Component getComponent() {
-        try {
-            Component motor = motorWarehouse.take();
-            notifyObservers();
-            return motor;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+    public Component getComponent() throws InterruptedException{
+        Component motor = motorWarehouse.poll(5, TimeUnit.SECONDS);
+        notifyObservers();
+        return motor;
     }
 
     @Override

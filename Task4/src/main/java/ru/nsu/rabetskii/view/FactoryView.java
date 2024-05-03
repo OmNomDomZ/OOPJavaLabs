@@ -31,10 +31,10 @@ public class FactoryView extends JFrame implements ChangeListener, Observer {
 
         mainLabel = new JLabel();
 
-        motorSupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, factory.getMotorSupplier().getSpeed() / 100 );
-        bodySupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, factory.getBodySupplier().getSpeed() / 100);
-        accessorySupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, factory.getAccessoriesSupplierList().getFirst().getSpeed() / 100);
-        dealerSupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, factory.getDealerList().getFirst().getSpeed() / 100);
+        motorSupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 40, factory.getMotorSupplier().getSpeed() / 100 );
+        bodySupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 40, factory.getBodySupplier().getSpeed() / 100);
+        accessorySupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 40, factory.getAccessoriesSupplierList().getFirst().getSpeed() / 100);
+        dealerSupplierSpeedSlider = new JSlider(JSlider.HORIZONTAL, 1, 40, factory.getDealerList().getFirst().getSpeed() / 100);
 
         motorText = new JTextArea();
         settingJTextArea(motorText);

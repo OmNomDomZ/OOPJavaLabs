@@ -6,6 +6,7 @@ import ru.nsu.rabetskii.component.Component;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BodyWarehouse implements Warehouse, Observable {
@@ -18,24 +19,23 @@ public class BodyWarehouse implements Warehouse, Observable {
     }
 
     @Override
-    public void addComponent(Component component) {
+    public boolean addComponent(Component component) {
         try{
-            bodyWarehouse.put(component);
-            notifyObservers();
+            boolean res = bodyWarehouse.offer(component, 5, TimeUnit.SECONDS);
+            if (res){
+                notifyObservers();
+            }
+            return res;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public Component getComponent() {
-        try {
-            Component body = bodyWarehouse.take();
+    public Component getComponent() throws InterruptedException{
+            Component body = bodyWarehouse.poll(5, TimeUnit.SECONDS);
             notifyObservers();
             return body;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override

@@ -33,17 +33,20 @@ public class Dealer implements Runnable, Observable {
 
     @Override
     public void run() {
-        while (isRunning) {
+        while (isRunning && !Thread.currentThread().isInterrupted()) {
             try {
                 Thread.sleep(speed);
                 Component car = autoWarehouse.getComponent();
+                if (car == null){
+                    continue;
+                }
                 LocalTime currentTime = LocalTime.now();
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
                 String formattedTime = currentTime.format(formatter);
                 System.out.println("<" + formattedTime + ">" + "Dealer #" + dealerId + " sold car: " + car.getInformation());
                 notifyObservers();
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                break;
             }
         }
     }

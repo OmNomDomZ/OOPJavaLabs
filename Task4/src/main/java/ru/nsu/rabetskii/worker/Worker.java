@@ -34,28 +34,33 @@ public class Worker implements Runnable, Observable {
 
     @Override
     public void run(){
-        while (isRunning) {
-            isWaiting = false;
-            numTasks.incrementAndGet();
-            notifyObservers();
-            Component body = bodyWarehouse.getComponent();
-            Component motor = motorWarehouse.getComponent();
-            Component accessory = accessoryWarehouse.getComponent();
-            autoId = autoWarehouse.getNewId();
-            Auto car = new Auto(body, motor, accessory, autoId);
-            if (log){
-                System.out.println("Worker #" + workerId + " assembled car: " + car.getId());
-            }
-            synchronized (this) {
-                autoWarehouse.addComponent(car);
-                isWaiting = true;
-                try {
+        while (isRunning && !Thread.currentThread().isInterrupted()) {
+            try{
+                isWaiting = false;
+                numTasks.incrementAndGet();
+                notifyObservers();
+                Component body = bodyWarehouse.getComponent();
+                Component motor = motorWarehouse.getComponent();
+                Component accessory = accessoryWarehouse.getComponent();
+                if (body == null || motor == null || accessory == null){
+                    continue;
+                }
+                autoId = autoWarehouse.getNewId();
+                Auto car = new Auto(body, motor, accessory, autoId);
+                if (log){
+                    System.out.println("Worker #" + workerId + " assembled car: " + car.getId());
+                }
+                synchronized (this) {
+                    isWaiting = true;
+                    if (!autoWarehouse.addComponent(car)){
+                        continue;
+                    }
                     numTasks.decrementAndGet();
                     notifyObservers();
                     this.wait();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
                 }
+            } catch (InterruptedException e){
+                break;
             }
         }
     }

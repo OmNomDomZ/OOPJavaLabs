@@ -13,17 +13,19 @@ public class AccessorySupplier extends BaseSupplier implements Runnable {
 
     @Override
     public void run() {
-        while (isRunning) {
+        while (isRunning && !Thread.currentThread().isInterrupted()) {
             try {
                 Thread.sleep(speed);
                 int accessoryId = warehouse.getNewId();
                 Component component = new AccessoryComponent(accessoryId);
-                warehouse.addComponent(component);
+                if (!warehouse.addComponent(component)){
+                    continue;
+                }
                 if (log) {
                     System.out.println("Accessory #" + component.getId());
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                break;
             }
         }
     }
