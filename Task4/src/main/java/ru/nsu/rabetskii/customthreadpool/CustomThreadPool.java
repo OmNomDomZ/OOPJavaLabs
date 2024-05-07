@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CustomThreadPool implements ExecutorService {
     private final int maxThreads;
     private final BlockingQueue<Runnable> taskQueue;
-    private final List<Thread> threads = new ArrayList<>();
+    private final List<Thread> workers = new ArrayList<>();
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition termination = lock.newCondition();
@@ -23,31 +23,23 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public void execute(Runnable command) {
-        if (!isRunning.get())
-        {
-            throw new RuntimeException("ThreadPool is shutting down");
+        if (!isRunning.get()) {
+            throw new RejectedExecutionException("ThreadPool is shutdown");
         }
         try {
             taskQueue.put(command);
-            manageThreads();
+            lock.lock();
+            try {
+                if (workers.size() < maxThreads && !taskQueue.isEmpty()) {
+                    Thread workerThread = new Thread(new Worker());
+                    workers.add(workerThread);
+                    workerThread.start();
+                }
+            } finally {
+                lock.unlock();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        }
-    }
-
-    private void manageThreads() {
-        lock.lock();
-        try {
-            while (threads.size() < maxThreads && !taskQueue.isEmpty()) {
-                Runnable task = taskQueue.poll();
-                if (task != null) {
-                    Thread thread = new Thread(task);
-                    threads.add(thread);
-                    thread.start();
-                }
-            }
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -69,8 +61,8 @@ public class CustomThreadPool implements ExecutorService {
             isRunning.set(false);
             List<Runnable> unfinishedTasks = new ArrayList<>(taskQueue);
             taskQueue.clear();
-            for (Thread thread : threads) {
-                thread.interrupt();
+            for (Thread worker : workers) {
+                worker.interrupt();
             }
             termination.signalAll();
             return unfinishedTasks;
@@ -86,7 +78,7 @@ public class CustomThreadPool implements ExecutorService {
 
     @Override
     public boolean isTerminated() {
-        return !isRunning.get() && threads.stream().noneMatch(Thread::isAlive);
+        return !isRunning.get() && workers.stream().noneMatch(Thread::isAlive);
     }
 
     @Override
@@ -108,7 +100,6 @@ public class CustomThreadPool implements ExecutorService {
         } finally {
             lock.unlock();
         }
-
     }
 
     @Override
@@ -221,4 +212,34 @@ public class CustomThreadPool implements ExecutorService {
         }
         throw lastException != null ? lastException : new ExecutionException("No successful task.", null);
     }
+
+    private class Worker implements Runnable {
+        public void run() {
+            try {
+                while (isRunning.get() || !taskQueue.isEmpty()) {
+                    Runnable task;
+                    try {
+                        task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
+                        if (task != null) {
+                            task.run();
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } finally {
+                lock.lock();
+                try {
+                    workers.remove(Thread.currentThread());
+                    if (workers.isEmpty()) {
+                        termination.signalAll();
+                    }
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }
+    }
 }
+
+
