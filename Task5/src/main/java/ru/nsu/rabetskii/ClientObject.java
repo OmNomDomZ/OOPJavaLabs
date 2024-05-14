@@ -5,7 +5,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "command")
-public class Client {
+public class ClientObject {
     @XmlAttribute(name = "name")
     private String command;
     @XmlElement(name = "userName")
@@ -13,9 +13,8 @@ public class Client {
     @XmlElement(name = "password")
     private String password;
     private String message;
-
-    public Client(){};
-    public Client(String command, String userName, String password) {
+    public ClientObject(){}
+    public ClientObject(String command, String userName, String password) {
         this.command = command;
         this.userName = userName;
         this.password = password;

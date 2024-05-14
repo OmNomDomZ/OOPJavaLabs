@@ -26,25 +26,25 @@ import javax.xml.bind.Unmarshaller;
 
 public class XmlUtility {
 
-    private JAXBContext jaxbContext;
+    private final JAXBContext jaxbContext;
 
     public XmlUtility(Class<?> clazz) throws JAXBException {
         this.jaxbContext = JAXBContext.newInstance(clazz);
     }
 
-    public Client unmarshalFromFile(String filePath) throws JAXBException {
+    public ClientObject unmarshalFromFile(String filePath) throws JAXBException {
         File file = new File(filePath);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-        return (Client) unmarshaller.unmarshal(file);
+        return (ClientObject) unmarshaller.unmarshal(file);
     }
 
-    public String marshalToXml(Client client) throws JAXBException {
+    public String marshalToXml(ClientObject clientObject) throws JAXBException {
         Marshaller marshaller = jaxbContext.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
         marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
 
         StringWriter writer = new StringWriter();
-        marshaller.marshal(client, writer);
+        marshaller.marshal(clientObject, writer);
         return writer.toString();
     }
 
