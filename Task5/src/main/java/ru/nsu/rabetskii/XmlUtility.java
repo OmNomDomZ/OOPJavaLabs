@@ -1,28 +1,14 @@
 package ru.nsu.rabetskii;
 
+import ru.nsu.rabetskii.xmlmessage.Command;
+
 import java.io.File;
+import java.io.StringReader;
 import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-
-//public class XMLParser {
-//    public XMLParser(String fileName){
-//        try {
-//            File file = new File(fileName);
-//            JAXBContext jaxbContext = JAXBContext.newInstance(Client.class);
-//
-//            Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-//            Client client = (Client) unmarshaller.unmarshal(file);
-//
-//            System.out.println(client.getCommand());
-//
-//        } catch (JAXBException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
-//}
 
 public class XmlUtility {
 
@@ -32,21 +18,24 @@ public class XmlUtility {
         this.jaxbContext = JAXBContext.newInstance(clazz);
     }
 
-    public ClientObject unmarshalFromFile(String filePath) throws JAXBException {
+    public Command unmarshalFromFile(String filePath) throws JAXBException {
         File file = new File(filePath);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-        return (ClientObject) unmarshaller.unmarshal(file);
+        return (Command) unmarshaller.unmarshal(file);
     }
 
-    public String marshalToXml(ClientObject clientObject) throws JAXBException {
+    public Command unmarshalFromString(String xml) throws JAXBException {
+        Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+        return (Command) unmarshaller.unmarshal(new StringReader(xml));
+    }
+
+    public String marshalToXml(Object obj) throws JAXBException {
         Marshaller marshaller = jaxbContext.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
         marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
 
         StringWriter writer = new StringWriter();
-        marshaller.marshal(clientObject, writer);
+        marshaller.marshal(obj, writer);
         return writer.toString();
     }
-
-
 }

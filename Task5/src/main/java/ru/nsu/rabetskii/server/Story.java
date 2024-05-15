@@ -16,8 +16,9 @@ class Story {
             story.add(el);
         }
     }
+
     public void printStory(BufferedWriter writer) {
-        if(!story.isEmpty()) {
+        if (!story.isEmpty()) {
             try {
                 writer.write("History messages" + "\n");
                 for (String message : story) {

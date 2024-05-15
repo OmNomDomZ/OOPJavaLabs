@@ -1,5 +1,9 @@
 package ru.nsu.rabetskii.client;
 
+import ru.nsu.rabetskii.xmlmessage.Command;
+import ru.nsu.rabetskii.XmlUtility;
+
+import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
@@ -8,43 +12,37 @@ import java.util.Date;
 class ClientHandler {
 
     private Socket socket;
-    private BufferedReader in;
-    private BufferedWriter out;
+    private DataInputStream in;
+    private DataOutputStream out;
     private BufferedReader inputUser;
-    private String addr;
-    private int port;
     private String nickname;
     private Date time;
     private String dtime;
     private SimpleDateFormat dt1;
+    private XmlUtility xmlUtility;
 
-    public ClientHandler(String addr, int port) {
-        this.addr = addr;
-        this.port = port;
-        try {
-            this.socket = new Socket(addr, port);
-        } catch (IOException e) {
-            System.err.println("Socket failed");
-        }
-        try {
-            inputUser = new BufferedReader(new InputStreamReader(System.in));
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.pressNickname();
-            new ReadMsg().start();
-            new WriteMsg().start();
-        } catch (IOException e) {
-            ClientHandler.this.downService();
-        }
+    public ClientHandler(String addr, int port) throws IOException, JAXBException {
+        this.socket = new Socket(addr, port);
+        this.xmlUtility = new XmlUtility(Command.class);
+        in = new DataInputStream(socket.getInputStream());
+        out = new DataOutputStream(socket.getOutputStream());
+        inputUser = new BufferedReader(new InputStreamReader(System.in));
+        dt1 = new SimpleDateFormat("HH:mm:ss");
+
+        promptNickname();
+        new ReadMsg().start();
+        new WriteMsg().start();
     }
 
-    private void pressNickname() {
-        System.out.print("Press your nick: ");
+    private void promptNickname() {
+        System.out.print("Enter your nickname: ");
         try {
             nickname = inputUser.readLine();
-            out.write("Hello " + nickname + "\n");
-            out.flush();
-        } catch (IOException ignored) {}
+            Command loginCommand = new Command("login", nickname);
+
+            System.out.println();
+            sendXmlMessage(loginCommand);
+        } catch (IOException | JAXBException ignored) {}
     }
 
     private void downService() {
@@ -57,44 +55,48 @@ class ClientHandler {
         } catch (IOException ignored) {}
     }
 
+    private void sendXmlMessage(Command command) throws JAXBException, IOException {
+        String xmlMessage = xmlUtility.marshalToXml(command);
+        out.writeInt(xmlMessage.length());
+        out.write(xmlMessage.getBytes());
+        out.flush();
+    }
+
     private class ReadMsg extends Thread {
         @Override
         public void run() {
-            String str;
             try {
                 while (true) {
-                    str = in.readLine();
-                    if (str.equals("stop")) {
-                        ClientHandler.this.downService();
-                        break;
+                    int length = in.readInt();
+                    if (length <= 0) continue;
+                    byte[] buffer = new byte[length];
+                    in.readFully(buffer);
+                    String xmlMessage = new String(buffer);
+                    Command command = xmlUtility.unmarshalFromString(xmlMessage);
+
+                    if ("message".equals(command.getCommand())) {
+                        System.out.println(command.getUserName() + ": " + command.getMessage());
+                    } else if ("login".equals(command.getCommand())) {
+                        System.out.println(command.getUserName() + " joined the chat");
                     }
-                    System.out.println(str);
                 }
-            } catch (IOException e) {
+            } catch (IOException | JAXBException e) {
                 ClientHandler.this.downService();
             }
         }
     }
 
-    public class WriteMsg extends Thread {
+    private class WriteMsg extends Thread {
         @Override
         public void run() {
             while (true) {
-                String userWord;
                 try {
                     time = new Date();
-                    dt1 = new SimpleDateFormat("HH:mm:ss");
                     dtime = dt1.format(time);
-                    userWord = inputUser.readLine();
-                    if (userWord.equals("stop")) {
-                        out.write("stop" + "\n");
-                        ClientHandler.this.downService();
-                        break;
-                    } else {
-                        out.write("(" + dtime + ") " + nickname + ": " + userWord + "\n");
-                    }
-                    out.flush();
-                } catch (IOException e) {
+                    String userWord = inputUser.readLine();
+                    Command messageCommand = new Command("message", nickname, userWord);
+                    sendXmlMessage(messageCommand);
+                } catch (IOException | JAXBException e) {
                     ClientHandler.this.downService();
                 }
             }

@@ -1,25 +1,32 @@
-package ru.nsu.rabetskii;
+package ru.nsu.rabetskii.xmlmessage;
 
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "command")
-public class ClientObject {
+public class Command {
     @XmlAttribute(name = "name")
     private String command;
     @XmlElement(name = "userName")
     private String userName;
     @XmlElement(name = "password")
     private String password;
+    @XmlElement(name = "message")
     private String message;
-    public ClientObject(){}
-    public ClientObject(String command, String userName, String password) {
+
+    public Command() {}
+
+    public Command(String command, String userName) {
         this.command = command;
         this.userName = userName;
-        this.password = password;
     }
 
+    public Command(String command, String userName, String message) {
+        this.command = command;
+        this.userName = userName;
+        this.message = message;
+    }
 
     public String getCommand() {
         return command;
