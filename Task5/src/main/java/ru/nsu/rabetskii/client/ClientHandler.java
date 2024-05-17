@@ -2,12 +2,16 @@ package ru.nsu.rabetskii.client;
 
 import ru.nsu.rabetskii.xmlmessage.Command;
 import ru.nsu.rabetskii.XmlUtility;
+import ru.nsu.rabetskii.xmlmessage.Event;
+import ru.nsu.rabetskii.xmlmessage.Success;
+import ru.nsu.rabetskii.xmlmessage.Error;
 
 import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 
 class ClientHandler {
 
@@ -23,7 +27,7 @@ class ClientHandler {
 
     public ClientHandler(String addr, int port) throws IOException, JAXBException {
         this.socket = new Socket(addr, port);
-        this.xmlUtility = new XmlUtility(Command.class);
+        this.xmlUtility = new XmlUtility(Command.class, Event.class, Success.class, Error.class);
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
         inputUser = new BufferedReader(new InputStreamReader(System.in));
@@ -35,24 +39,43 @@ class ClientHandler {
     }
 
     private void promptNickname() {
-        System.out.print("Enter your nickname: ");
         try {
+            System.out.print("Enter your nickname: ");
             nickname = inputUser.readLine();
-            Command loginCommand = new Command("login", nickname);
-
-            System.out.println();
+            System.out.print("Enter your password: ");
+            String password = inputUser.readLine();
+            Command loginCommand = new Command("login", nickname, password);
             sendXmlMessage(loginCommand);
+
+            // Ожидание ответа от сервера
+            int length = in.readInt();
+            if (length <= 0) {
+                System.out.println("Error");
+                return;
+            }
+            byte[] buffer = new byte[length];
+            in.readFully(buffer);
+            String xmlMessage = new String(buffer);
+
+            if (xmlMessage.contains("success")) {
+                System.out.println("Login successful!");
+            } else if (xmlMessage.contains("error")) {
+                Error error = xmlUtility.unmarshalFromString(xmlMessage, Error.class);
+                System.out.println("Login failed: " + error.getMessage());
+            }
         } catch (IOException | JAXBException ignored) {}
     }
 
     private void downService() {
         try {
             if (!socket.isClosed()) {
-                socket.close();
                 in.close();
                 out.close();
+//                socket.close();
             }
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void sendXmlMessage(Command command) throws JAXBException, IOException {
@@ -66,22 +89,42 @@ class ClientHandler {
         @Override
         public void run() {
             try {
-                while (true) {
-                    int length = in.readInt();
+                while (!socket.isClosed()) {
+                    int length;
+                    try {
+                        length = in.readInt();
+                    } catch (EOFException e) {
+                        System.out.println("Server disconnected");
+                        break;
+                    }
                     if (length <= 0) continue;
                     byte[] buffer = new byte[length];
                     in.readFully(buffer);
                     String xmlMessage = new String(buffer);
-                    Command command = xmlUtility.unmarshalFromString(xmlMessage);
 
-                    if ("message".equals(command.getCommand())) {
-                        System.out.println(command.getUserName() + ": " + command.getMessage());
-                    } else if ("login".equals(command.getCommand())) {
-                        System.out.println(command.getUserName() + " joined the chat");
+                    if (xmlMessage.contains("event")) {
+                        Event event = xmlUtility.unmarshalFromString(xmlMessage, Event.class);
+                        handleEvent(event);
+                    } else if (xmlMessage.contains("success")) {
+                        Success success = xmlUtility.unmarshalFromString(xmlMessage, Success.class);
+                        System.out.println("Success: " + success);
+                    } else if (xmlMessage.contains("error")) {
+                        Error error = xmlUtility.unmarshalFromString(xmlMessage, Error.class);
+                        System.out.println("Error: " + error.getMessage());
                     }
                 }
             } catch (IOException | JAXBException e) {
                 ClientHandler.this.downService();
+            }
+        }
+
+        private void handleEvent(Event event) {
+            if ("userlogin".equals(event.getEvent())) {
+                System.out.println(event.getUserName() + " joined the chat");
+            } else if ("userlogout".equals(event.getEvent())) {
+                System.out.println(event.getUserName() + " left the chat");
+            } else if ("message".equals(event.getEvent())) {
+                System.out.println(event.getFrom() + ": " + event.getMessage());
             }
         }
     }
@@ -89,13 +132,37 @@ class ClientHandler {
     private class WriteMsg extends Thread {
         @Override
         public void run() {
-            while (true) {
+            while (!socket.isClosed()) {
                 try {
-                    time = new Date();
-                    dtime = dt1.format(time);
                     String userWord = inputUser.readLine();
-                    Command messageCommand = new Command("message", nickname, userWord);
-                    sendXmlMessage(messageCommand);
+                    if (Objects.equals(userWord, "logout")) {
+                        Command messageCommand = new Command("logout", nickname);
+                        sendXmlMessage(messageCommand);
+
+                        // Ожидание ответа от сервера
+                        int length = in.readInt();
+                        if (length <= 0) {
+                            System.out.println("Error");
+                            return;
+                        }
+                        byte[] buffer = new byte[length];
+                        in.readFully(buffer);
+                        String xmlMessage = new String(buffer);
+
+                        if (xmlMessage.contains("success")) {
+                            System.out.println("Logout successful!");
+                            downService();
+                            break;
+                        } else if (xmlMessage.contains("error")) {
+                            Error error = xmlUtility.unmarshalFromString(xmlMessage, Error.class);
+                            System.out.println("Logout failed: " + error.getMessage());
+                        }
+                    } else {
+                        time = new Date();
+                        dtime = dt1.format(time);
+                        Command messageCommand = new Command("message", nickname, userWord);
+                        sendXmlMessage(messageCommand);
+                    }
                 } catch (IOException | JAXBException e) {
                     ClientHandler.this.downService();
                 }

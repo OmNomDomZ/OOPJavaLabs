@@ -1,6 +1,7 @@
 package ru.nsu.rabetskii;
 
 import ru.nsu.rabetskii.xmlmessage.Command;
+import ru.nsu.rabetskii.xmlmessage.Event;
 
 import java.io.File;
 import java.io.StringReader;
@@ -14,25 +15,25 @@ public class XmlUtility {
 
     private final JAXBContext jaxbContext;
 
-    public XmlUtility(Class<?> clazz) throws JAXBException {
-        this.jaxbContext = JAXBContext.newInstance(clazz);
+    public XmlUtility(Class<?>... classes) throws JAXBException {
+        this.jaxbContext = JAXBContext.newInstance(classes);
     }
 
-    public Command unmarshalFromFile(String filePath) throws JAXBException {
+    public <T> T unmarshalFromFile(String filePath, Class<T> clazz) throws JAXBException {
         File file = new File(filePath);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-        return (Command) unmarshaller.unmarshal(file);
+        return clazz.cast(unmarshaller.unmarshal(file));
     }
 
-    public Command unmarshalFromString(String xml) throws JAXBException {
+    public <T> T unmarshalFromString(String xml, Class<T> clazz) throws JAXBException {
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-        return (Command) unmarshaller.unmarshal(new StringReader(xml));
+        return clazz.cast(unmarshaller.unmarshal(new StringReader(xml)));
     }
 
     public String marshalToXml(Object obj) throws JAXBException {
         Marshaller marshaller = jaxbContext.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+//        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
 
         StringWriter writer = new StringWriter();
         marshaller.marshal(obj, writer);

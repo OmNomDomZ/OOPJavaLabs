@@ -6,8 +6,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "event")
 public class Event {
-    @XmlAttribute(name = "name")
-    private String name;
+    @XmlAttribute(name = "event")
+    private String event;
     @XmlElement(name = "from")
     private String from;
     @XmlElement(name = "message")
@@ -17,19 +17,19 @@ public class Event {
 
     public Event() {}
 
-    public Event(String name, String from, String message) {
-        this.name = name;
+    public Event(String event, String from, String message) {
+        this.event = event;
         this.from = from;
         this.message = message;
     }
 
-    public Event(String name, String userName) {
-        this.name = name;
+    public Event(String event, String userName) {
+        this.event = event;
         this.userName = userName;
     }
 
-    public String getName() {
-        return name;
+    public String getEvent() {
+        return event;
     }
 
     public String getFrom() {

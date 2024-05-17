@@ -3,6 +3,7 @@ package ru.nsu.rabetskii.xmlmessage;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Objects;
 
 @XmlRootElement(name = "command")
 public class Command {
@@ -17,15 +18,20 @@ public class Command {
 
     public Command() {}
 
-    public Command(String command, String userName) {
+    public Command(String command, String userName){
         this.command = command;
         this.userName = userName;
     }
 
-    public Command(String command, String userName, String message) {
+    public Command(String command, String userName, String action) {
         this.command = command;
         this.userName = userName;
-        this.message = message;
+        if (Objects.equals(command, "login")){
+            this.password = action;
+        } else if (Objects.equals(command, "message")){
+            this.message = action;
+        }
+
     }
 
     public String getCommand() {
