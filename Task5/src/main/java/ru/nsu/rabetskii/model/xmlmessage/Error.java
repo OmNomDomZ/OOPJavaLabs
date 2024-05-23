@@ -1,4 +1,4 @@
-package ru.nsu.rabetskii.xmlmessage;
+package ru.nsu.rabetskii.model.xmlmessage;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;

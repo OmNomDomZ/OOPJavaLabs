@@ -1,5 +1,8 @@
-package ru.nsu.rabetskii.server;
+package ru.nsu.rabetskii.model.server;
 
+import ru.nsu.rabetskii.model.xmlmessage.Event;
+
+import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -21,7 +24,8 @@ public class Server {
             while (true) {
                 Socket socket = server.accept();
                 try {
-                    serverList.add(new ClientConnection(socket));
+                    ClientConnection clientConnection = new ClientConnection(socket);
+                    serverList.add(clientConnection);
                 } catch (IOException e) {
                     socket.close();
                 }
@@ -42,6 +46,12 @@ public class Server {
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void broadcastMessage(Event event) throws IOException, JAXBException {
+        for (ClientConnection client : serverList) {
+            client.sendMessage(event);
         }
     }
 }

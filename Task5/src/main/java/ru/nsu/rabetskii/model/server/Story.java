@@ -1,4 +1,4 @@
-package ru.nsu.rabetskii.server;
+package ru.nsu.rabetskii.model.server;
 
 import java.io.BufferedWriter;
 import java.io.IOException;

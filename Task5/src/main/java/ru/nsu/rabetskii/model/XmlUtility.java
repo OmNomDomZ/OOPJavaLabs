@@ -1,7 +1,4 @@
-package ru.nsu.rabetskii;
-
-import ru.nsu.rabetskii.xmlmessage.Command;
-import ru.nsu.rabetskii.xmlmessage.Event;
+package ru.nsu.rabetskii.model;
 
 import java.io.File;
 import java.io.StringReader;

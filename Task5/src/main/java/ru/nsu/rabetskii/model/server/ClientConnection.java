@@ -1,9 +1,10 @@
-package ru.nsu.rabetskii.server;
+package ru.nsu.rabetskii.model.server;
 
-import ru.nsu.rabetskii.XmlUtility;
-import ru.nsu.rabetskii.xmlmessage.Command;
-import ru.nsu.rabetskii.xmlmessage.Event;
-import ru.nsu.rabetskii.xmlmessage.Success;
+import ru.nsu.rabetskii.model.XmlUtility;
+import ru.nsu.rabetskii.model.xmlmessage.Command;
+import ru.nsu.rabetskii.model.xmlmessage.Event;
+import ru.nsu.rabetskii.model.xmlmessage.Success;
+import ru.nsu.rabetskii.model.xmlmessage.Error;
 
 import java.io.*;
 import java.net.Socket;
@@ -30,9 +31,8 @@ public class ClientConnection extends Thread {
 
     @Override
     public void run() {
-
-        while (!socket.isClosed()) {
-            try {
+        try {
+            while (!socket.isClosed()) {
                 int length = in.readInt();
                 if (length <= 0) continue;
                 byte[] buffer = new byte[length];
@@ -51,33 +51,27 @@ public class ClientConnection extends Thread {
                         handleLogout(command);
                         break;
                     default:
-                        sendErrorMessage();
-                        System.out.println("Unknown command: " + command.getCommand());
+                        sendErrorMessage("Unknown command: " + command.getCommand());
                 }
-            } catch (EOFException e) {
-                System.out.println("Client disconnected");
-                break;
-            } catch (IOException | JAXBException e) {
-                throw new RuntimeException(e);
+            }
+        } catch (EOFException e) {
+            System.out.println("Client disconnected");
+        } catch (IOException | JAXBException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-
-    }
-
-    private void handleLogout(Command command) throws JAXBException, IOException {
-        String userName = command.getUserName();
-        if (userName == null) {
-            System.out.println("Missing username");
-        }
-        broadcastMessage(new Event("userlogout", userName));
-        sendSuccessMessage();
     }
 
     private void handleLogin(Command command) throws IOException, JAXBException {
         String userName = command.getUserName();
         String password = command.getPassword();
         if (userName == null || password == null) {
-            System.out.println("Missing username or password");
+            sendErrorMessage("Missing username or password");
             return;
         }
 
@@ -88,65 +82,58 @@ public class ClientConnection extends Thread {
             Server.activeUsers.add(userName);
             this.userName = userName;
             sendSuccessMessage();
-            broadcastMessage(new Event("userlogin", userName));
+            Server.broadcastMessage(new Event("userlogin", userName));
         } else if (Server.userPasswords.get(userName).equals(hashedPassword)) {
             Server.activeUsers.add(userName);
             this.userName = userName;
-            sendErrorMessage();
-            broadcastMessage(new Event("userlogin", userName));
+            sendSuccessMessage();
+            Server.broadcastMessage(new Event("userlogin", userName));
         } else {
-            sendErrorMessage();
-//            this.downService();
+            sendErrorMessage("Incorrect password");
         }
-    }
-
-    private void sendSuccessMessage() throws JAXBException, IOException {
-        System.out.println("success");
-        Success success = new Success();
-        String xmlMessage = xmlUtility.marshalToXml(success);
-        out.writeInt(xmlMessage.length());
-        out.write(xmlMessage.getBytes());
-        out.flush();
-    }
-
-    private void sendErrorMessage() throws JAXBException, IOException {
-        System.out.println("error");
-        Error error = new Error("Login failed");
-        String xmlMessage = xmlUtility.marshalToXml(error);
-        out.writeInt(xmlMessage.length());
-        out.write(xmlMessage.getBytes());
-        out.flush();
     }
 
     private void handleMessage(Command command) throws IOException, JAXBException {
         String message = command.getMessage();
         if (message == null) {
-            System.out.println("No message content");
+            sendErrorMessage("No message content");
             return;
         }
-        broadcastMessage(new Event("message", userName, message));
+        Server.broadcastMessage(new Event("message", userName, message));
     }
 
-    private void broadcastMessage(Event event) throws JAXBException, IOException {
-        for (ClientConnection client : Server.serverList) {
-            client.sendXmlMessage(event);
+    private void handleLogout(Command command) throws IOException, JAXBException {
+        String userName = command.getUserName();
+        if (userName == null) {
+            sendErrorMessage("Missing username");
+            return;
         }
+        Server.activeUsers.remove(userName);
+        Server.broadcastMessage(new Event("userlogout", userName));
+        sendSuccessMessage();
+        socket.close();
     }
 
-    private void sendXmlMessage(Event event) throws JAXBException, IOException {
+    private void sendSuccessMessage() throws JAXBException, IOException {
+        Success success = new Success();
+        String xmlMessage = xmlUtility.marshalToXml(success);
+        sendMessage(xmlMessage);
+    }
+
+    private void sendErrorMessage(String errorMessage) throws JAXBException, IOException {
+        Error error = new Error(errorMessage);
+        String xmlMessage = xmlUtility.marshalToXml(error);
+        sendMessage(xmlMessage);
+    }
+
+    public void sendMessage(Event event) throws JAXBException, IOException {
         String xmlMessage = xmlUtility.marshalToXml(event);
+        sendMessage(xmlMessage);
+    }
+
+    private void sendMessage(String xmlMessage) throws IOException {
         out.writeInt(xmlMessage.length());
         out.write(xmlMessage.getBytes());
         out.flush();
     }
-
-//    private void downService() {
-//        try {
-//            if (!socket.isClosed()) {
-////                socket.close();
-////                in.close();
-////                out.close();
-//            }
-////        } catch (IOException ignored) {}
-//    }
 }
