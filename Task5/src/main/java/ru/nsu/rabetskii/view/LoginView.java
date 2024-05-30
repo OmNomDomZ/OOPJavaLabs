@@ -13,11 +13,15 @@ public class LoginView {
     private JTextField nicknameField;
     private JPasswordField passwordField;
     private JButton loginButton;
-    private ChatModel chatModel;
+    private final ChatModel chatModel;
+    private final String addr;
+    private final int port;
 
-    public LoginView(ChatModel chatModel) {
+    public LoginView(ChatModel chatModel, String addr, int port) {
         this.chatModel = chatModel;
         createAndShowGUI();
+        this.addr = addr;
+        this.port = port;
     }
 
     private void createAndShowGUI() {
@@ -45,13 +49,19 @@ public class LoginView {
                 try {
                     String nickname = nicknameField.getText();
                     String password = new String(passwordField.getPassword());
-                    ClientHandler clientHandler = new ClientHandler("localhost", 8080, chatModel, nickname, password);
-                    frame.dispose();
-                    new ChatView(chatModel, nickname, clientHandler);
+                    ClientHandler clientHandler = new ClientHandler(addr, port, chatModel, nickname, password);
+                    if (clientHandler.isLoggedIn()) {
+                        frame.dispose();
+                        createChatView(chatModel, nickname, clientHandler);
+                    }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(frame, "Login failed: " + ex.getMessage());
                 }
             }
         });
+    }
+
+    private void createChatView(ChatModel chatModel, String nickname, ClientHandler clientHandler) {
+        SwingUtilities.invokeLater(() -> new ChatView(chatModel, nickname, clientHandler));
     }
 }

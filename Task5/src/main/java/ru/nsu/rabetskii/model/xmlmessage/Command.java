@@ -3,22 +3,17 @@ package ru.nsu.rabetskii.model.xmlmessage;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.Objects;
 
 @XmlRootElement(name = "command")
 public class Command {
-    @XmlAttribute(name = "name")
     private String command;
-    @XmlElement(name = "userName")
     private String userName;
-    @XmlElement(name = "password")
     private String password;
-    @XmlElement(name = "message")
     private String message;
 
     public Command() {}
 
-    public Command(String command, String userName){
+    public Command(String command, String userName) {
         this.command = command;
         this.userName = userName;
     }
@@ -26,27 +21,46 @@ public class Command {
     public Command(String command, String userName, String action) {
         this.command = command;
         this.userName = userName;
-        if (Objects.equals(command, "login")){
+        if ("login".equals(command)) {
             this.password = action;
-        } else if (Objects.equals(command, "message")){
+        } else if ("message".equals(command)) {
             this.message = action;
         }
-
     }
 
+    @XmlAttribute(name = "name")
     public String getCommand() {
         return command;
     }
 
+    public void setCommand(String command) {
+        this.command = command;
+    }
+
+    @XmlElement(name = "name")
     public String getUserName() {
         return userName;
     }
 
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    @XmlElement(name = "password")
     public String getPassword() {
         return password;
     }
 
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    @XmlElement(name = "message")
     public String getMessage() {
         return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 }

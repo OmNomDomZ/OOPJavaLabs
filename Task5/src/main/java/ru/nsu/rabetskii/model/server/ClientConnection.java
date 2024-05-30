@@ -8,7 +8,10 @@ import ru.nsu.rabetskii.model.xmlmessage.Error;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import javax.xml.bind.JAXBException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ClientConnection extends Thread {
     private Socket socket;
@@ -29,6 +32,16 @@ public class ClientConnection extends Thread {
         start();
     }
 
+    private void handleMessage(Command command) throws IOException, JAXBException {
+        String message = command.getMessage();
+        if (message == null) {
+            sendErrorMessage("No message content");
+            return;
+        }
+        Server.broadcastMessage(new Event("message", userName, message));
+        Server.log(userName + ": " + message); // Логирование отправленного сообщения
+    }
+
     @Override
     public void run() {
         try {
@@ -37,7 +50,7 @@ public class ClientConnection extends Thread {
                 if (length <= 0) continue;
                 byte[] buffer = new byte[length];
                 in.readFully(buffer);
-                String xmlMessage = new String(buffer);
+                String xmlMessage = new String(buffer, StandardCharsets.UTF_8);
                 Command command = xmlUtility.unmarshalFromString(xmlMessage, Command.class);
 
                 switch (command.getCommand()) {
@@ -45,24 +58,40 @@ public class ClientConnection extends Thread {
                         handleLogin(command);
                         break;
                     case "message":
-                        handleMessage(command);
+                        if (userName != null) {
+                            handleMessage(command);
+                        } else {
+                            sendErrorMessage("Not logged in");
+                        }
+                        break;
+                    case "list":
+                        if (userName != null) {
+                            handleList();
+                        } else {
+                            sendErrorMessage("Not logged in");
+                        }
                         break;
                     case "logout":
-                        handleLogout(command);
+                        if (userName != null) {
+                            handleLogout(command);
+                        } else {
+                            sendErrorMessage("Not logged in");
+                        }
                         break;
                     default:
                         sendErrorMessage("Unknown command: " + command.getCommand());
                 }
             }
         } catch (EOFException e) {
-            System.out.println("Client disconnected");
+            Server.log("Client disconnected");
         } catch (IOException | JAXBException e) {
-            e.printStackTrace();
+            Server.log("Error handling client connection: " + e.getMessage());
         } finally {
             try {
+                handleClientDisconnect();
                 socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException | JAXBException e) {
+                Server.log("Error closing client connection: " + e.getMessage());
             }
         }
     }
@@ -83,35 +112,45 @@ public class ClientConnection extends Thread {
             this.userName = userName;
             sendSuccessMessage();
             Server.broadcastMessage(new Event("userlogin", userName));
+            Server.log(userName + " joined the chat");
+            sendHistoryMessages();
         } else if (Server.userPasswords.get(userName).equals(hashedPassword)) {
             Server.activeUsers.add(userName);
             this.userName = userName;
             sendSuccessMessage();
             Server.broadcastMessage(new Event("userlogin", userName));
+            Server.log(userName + " joined the chat");
+            sendHistoryMessages();
         } else {
             sendErrorMessage("Incorrect password");
+            socket.close();
         }
     }
 
-    private void handleMessage(Command command) throws IOException, JAXBException {
-        String message = command.getMessage();
-        if (message == null) {
-            sendErrorMessage("No message content");
-            return;
+    private void sendHistoryMessages() throws IOException, JAXBException {
+        synchronized (Server.messageHistory) {
+            for (Event event : Server.messageHistory) {
+                if ("userlogin".equals(event.getEvent()) && event.getUserName().equals(this.userName)) {
+                    continue;
+                }
+                sendMessage(event);
+            }
         }
-        Server.broadcastMessage(new Event("message", userName, message));
     }
 
     private void handleLogout(Command command) throws IOException, JAXBException {
-        String userName = command.getUserName();
-        if (userName == null) {
-            sendErrorMessage("Missing username");
-            return;
-        }
-        Server.activeUsers.remove(userName);
-        Server.broadcastMessage(new Event("userlogout", userName));
+        handleClientDisconnect();
         sendSuccessMessage();
-        socket.close();
+    }
+
+    private void handleClientDisconnect() throws IOException, JAXBException {
+        if (userName != null) {
+            Server.activeUsers.remove(userName);
+            Event logoutEvent = new Event("userlogout", userName);
+            Server.broadcastMessage(logoutEvent);
+            Server.log(userName + " left the chat"); // Логирование отключения
+            userName = null;
+        }
     }
 
     private void sendSuccessMessage() throws JAXBException, IOException {
@@ -126,14 +165,36 @@ public class ClientConnection extends Thread {
         sendMessage(xmlMessage);
     }
 
-    public void sendMessage(Event event) throws JAXBException, IOException {
-        String xmlMessage = xmlUtility.marshalToXml(event);
+    private void handleList() throws JAXBException, IOException {
+        List<Success.User> users = Server.activeUsers.stream()
+                .map(name -> {
+                    Success.User user = new Success.User();
+                    user.setName(name);
+                    return user;
+                })
+                .collect(Collectors.toList());
+
+        Success success = new Success();
+        Success.Users userList = new Success.Users();
+        userList.setUsers(users);
+        success.setUsers(userList);
+        sendSuccessMessage(success);
+    }
+
+    private void sendSuccessMessage(Success success) throws JAXBException, IOException {
+        String xmlMessage = xmlUtility.marshalToXml(success);
         sendMessage(xmlMessage);
     }
 
     private void sendMessage(String xmlMessage) throws IOException {
-        out.writeInt(xmlMessage.length());
-        out.write(xmlMessage.getBytes());
+        byte[] messageBytes = xmlMessage.getBytes(StandardCharsets.UTF_8);
+        out.writeInt(messageBytes.length);
+        out.write(messageBytes);
         out.flush();
+    }
+
+    public void sendMessage(Event event) throws JAXBException, IOException {
+        String xmlMessage = xmlUtility.marshalToXml(event);
+        sendMessage(xmlMessage);
     }
 }

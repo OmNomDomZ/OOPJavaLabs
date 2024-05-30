@@ -2,8 +2,9 @@ package ru.nsu.rabetskii.model.server;
 
 import ru.nsu.rabetskii.model.xmlmessage.Event;
 
+
 import javax.xml.bind.JAXBException;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.MessageDigest;
@@ -12,26 +13,45 @@ import java.util.*;
 
 public class Server {
 
-    public static final int PORT = 8080;
     public static LinkedList<ClientConnection> serverList = new LinkedList<>();
     public static Map<String, String> userPasswords = new HashMap<>();
     public static Set<String> activeUsers = new HashSet<>();
+    public static List<Event> messageHistory = new LinkedList<>();
+    public static boolean log;
 
-    public static void main(String[] args) throws IOException {
-        ServerSocket server = new ServerSocket(PORT);
-        System.out.println("Server Started");
+//    192.168.31.192
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            System.err.println("Usage: java Server <port>");
+            System.exit(1);
+        }
+
+        int port;
         try {
+            port = Integer.parseInt(args[0]);
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid port number.");
+            System.exit(1);
+            return;
+        }
+
+        try (ServerSocket server = new ServerSocket(port)) {
+            Properties properties = new Properties();
+            properties.load(Server.class.getResourceAsStream("/config.properties"));
+            log = Boolean.parseBoolean(properties.getProperty("log"));
+            log("Server Started on port " + port);
             while (true) {
-                Socket socket = server.accept();
                 try {
+                    Socket socket = server.accept();
                     ClientConnection clientConnection = new ClientConnection(socket);
                     serverList.add(clientConnection);
                 } catch (IOException e) {
-                    socket.close();
+                    log("Error accepting client connection: " + e.getMessage());
                 }
             }
-        } finally {
-            server.close();
+        } catch (IOException e) {
+            log("Error starting server: " + e.getMessage());
         }
     }
 
@@ -50,8 +70,32 @@ public class Server {
     }
 
     public static void broadcastMessage(Event event) throws IOException, JAXBException {
+        List<ClientConnection> toRemove = new ArrayList<>();
         for (ClientConnection client : serverList) {
-            client.sendMessage(event);
+            try {
+                client.sendMessage(event);
+            } catch (IOException e) {
+                toRemove.add(client);
+            } catch (JAXBException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        serverList.removeAll(toRemove);
+        addMessageToHistory(event);
+    }
+
+    private static void addMessageToHistory(Event event) {
+        synchronized (messageHistory) {
+            if (messageHistory.size() >= 10) {
+                messageHistory.remove(0);
+            }
+            messageHistory.add(event);
+        }
+    }
+
+    public static void log(String message) {
+        if (log) {
+            System.out.println(message);
         }
     }
 }

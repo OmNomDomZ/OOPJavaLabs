@@ -6,47 +6,45 @@ import java.util.List;
 
 @XmlRootElement(name = "success")
 public class Success {
-//    @XmlElement(name = "users")
-//    private Users users;
+    private Users users;
 
     public Success() {
     }
 
-//    public Success(Users users) {
-//        this.users = users;
-//    }
-//
-//    public Users getUsers() {
-//        return users;
-//    }
-//
-//    public static class Users {
-//        @XmlElement(name = "user")
-//        private List<User> userList;
-//
-//        public Users() {}
-//
-//        public Users(List<User> userList) {
-//            this.userList = userList;
-//        }
-//
-//        public List<User> getUserList() {
-//            return userList;
-//        }
-//    }
-//
-//    public static class User {
-//        @XmlElement(name = "name")
-//        private String name;
-//
-//        public User() {}
-//
-//        public User(String name) {
-//            this.name = name;
-//        }
-//
-//        public String getName() {
-//            return name;
-//        }
-//    }
+    @XmlElement(name = "users")
+    public Users getUsers() {
+        return users;
+    }
+
+    public void setUsers(Users users) {
+        this.users = users;
+    }
+
+    @XmlRootElement(name = "users")
+    public static class Users {
+        private List<User> users;
+
+        public List<User> getUsers() {
+            return users;
+        }
+
+        @XmlElement(name = "user")
+        public void setUsers(List<User> users) {
+            this.users = users;
+        }
+    }
+
+    @XmlRootElement(name = "user")
+    public static class User {
+        private String name;
+
+        @XmlElement(name = "name")
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
 }
